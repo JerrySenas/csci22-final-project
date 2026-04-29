@@ -15,7 +15,7 @@ public abstract class Sprite {
 
     private double translationSpeed;
 
-    public Sprite(double x, double y, String filepath) {
+    public Sprite(double x, double y, BufferedImage sprite) {
         this.x = x;
         this.y = y;
         targetX = x;
@@ -24,9 +24,22 @@ public abstract class Sprite {
         angle = 0;
         translationSpeed = 0.25;
 
+        image = sprite;
+    }
+
+    public Sprite(double x, double y, String filepath) {
+        this(x, y, loadImage(filepath));
+    }
+    
+    public static BufferedImage loadImage(String filepath) {
+        if (filepath.equals("")) {
+            return null;
+        }
         try {
-            image = ImageIO.read(new File(filepath));
+            return ImageIO.read(new File(filepath));
         } catch (Exception e) {
+            e.printStackTrace();
+            return null;
         }
     }
 

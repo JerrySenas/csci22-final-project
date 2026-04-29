@@ -16,7 +16,7 @@ public class GameCanvas extends JComponent implements KeyListener {
     private Rack rack;
     private TextBox flavorBox;
     private TextBox shootSelf, shootThem;
-    private Item[] items;
+    private ItemSprite[] items;
 
     private int selectedRow;
     private int selectedCol;
@@ -43,15 +43,14 @@ public class GameCanvas extends JComponent implements KeyListener {
         isTurn = false;
 
         sprites = new ArrayList<>();
-        items = new Item[16];
+        items = new ItemSprite[16];
         int itemCount = 0;
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 5; j++) {
-                if (j == 2) {
-                    continue;
-                }
-                Item item = new Item(i, j, (j < 2) ? Color.BLACK : Color.RED );
-                sprites.add(item);
+        for (int i = 0; i < 5; i++) {
+            if (i == 2) {
+                continue;
+            }
+            for (int j = 0; j < 4; j++) {
+                ItemSprite item = new ItemSprite(j, i, 0 );
                 items[itemCount] = item;
                 itemCount++;
             }
@@ -73,7 +72,7 @@ public class GameCanvas extends JComponent implements KeyListener {
         rack = new Rack(364, 313, 0, 0);
         sprites.add(rack);
 
-        flavorBox = new TextBox(10, 600, 1004, 110, "You find yourself in a unique situation...");
+        flavorBox = new TextBox(10, 600, 989, 110, "You find yourself in a unique situation...");
         sprites.add(flavorBox);
 
         try {
@@ -96,6 +95,14 @@ public class GameCanvas extends JComponent implements KeyListener {
     public void parseGameState(String[] gameState) {
         p1HPBar.setHP(Integer.parseInt(gameState[1]));
         p2HPBar.setHP(Integer.parseInt(gameState[2]));
+
+        for (int i = 0; i < 16; i++) {
+            Item serverItem = Item.getItem(Integer.parseInt(gameState[5 + i]));
+            if (items[i].getItem() != serverItem) {
+                items[i] = new ItemSprite(i, serverItem.getItemNum());
+            }
+        }
+        
         isTurn = Integer.parseInt(gameState[21]) == 1;
         if (isTurn) {
             flavorBox.setText("It's your turn. Time to make your choice.");
@@ -110,6 +117,9 @@ public class GameCanvas extends JComponent implements KeyListener {
     @Override
     public void paintComponent(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
+        for (ItemSprite item : items) {
+            item.draw(g2d);
+        }
         for (Sprite sprite : sprites) {
             sprite.update();
             sprite.draw(g2d);
@@ -175,17 +185,22 @@ public class GameCanvas extends JComponent implements KeyListener {
                     if (!isTurn) {
                         break;
                     }
+                    String cmd;
                     if (selectedCol == 2) {
-                        String cmd = "SHOOT;";
+                        cmd = "SHOOT;";
                         if (selectedRow == 0) {
                             cmd += "enemy";
                         } else {
                             cmd += "self";
                         }
-                        writeToServer.writeUTF(cmd);
+                    } else if (selectedCol < 2) {
+                        cmd = "ITEM;";
+                        cmd += items[4*selectedRow + selectedCol].itemNum;
+                        System.out.println(cmd);    
                     } else {
-                        writeToServer.writeUTF("Yo");
+                        break;
                     }
+                    writeToServer.writeUTF(cmd);
                     writeToServer.flush();
                     break;
                 default:
@@ -202,14 +217,24 @@ public class GameCanvas extends JComponent implements KeyListener {
     @Override
     public void keyTyped(KeyEvent e) {}
 
-    private class Item extends Sprite {
-        private Rectangle2D.Double outline;
-        private Color color;
+    private class ItemSprite extends Sprite {
+        private int itemNum;
+        private Item item;
+        private final Rectangle2D.Double outline;
 
-        public Item(int r, int c, Color col) {
-            super(getXFromCol(c), getYFromRow(r), null);
+        public ItemSprite(int r, int c, Item item) {
+            super(getXFromCol(c), getYFromRow(r), item.getSprite());
+            this.item = item;
+            itemNum = item.getItemNum();
             outline = new Rectangle2D.Double(getX(), getY(), 100, 100);
-            color = col;
+        }
+
+        public ItemSprite(int r, int c, int itemNum) {
+            this(r, c, Item.getItem(itemNum));
+        }
+
+        public ItemSprite(int itemIdx, int itemNum) {
+            this(getRowColumnFromItemIdx(itemIdx)[0], getRowColumnFromItemIdx(itemIdx)[1], Item.getItem(itemNum));
         }
 
         public static double getXFromCol(int col) {
@@ -224,11 +249,28 @@ public class GameCanvas extends JComponent implements KeyListener {
             return 140 + 115*row;
         }
 
+        public static int[] getRowColumnFromItemIdx(int itemIdx) {
+            itemIdx %= 16;
+            int[] rowCol = new int[2];
+            rowCol[0] = itemIdx % 4;
+            rowCol[1] = itemIdx / 4;
+            if (rowCol[1] >= 2) {
+                rowCol[1] += 1;
+            }
+
+            return rowCol;
+        }
+
         @Override
         public void draw(Graphics2D g2d) {
-            g2d.setColor(color);
+            if (itemNum != 0) {
+                super.draw(g2d);
+            }
+            g2d.setColor(Color.BLACK);
             g2d.draw(outline);
         }
+
+        public Item getItem() { return item; }
     }
 
     private class Cursor extends Sprite {
@@ -236,7 +278,7 @@ public class GameCanvas extends JComponent implements KeyListener {
         private int h;
 
         public Cursor(double x, double y) {
-            super(x, y, null);
+            super(x, y, "");
             w = 100;
             h = 100;
         }
@@ -272,7 +314,7 @@ public class GameCanvas extends JComponent implements KeyListener {
         private int hp;
         private Color color;
         public HPBar(double x, double y, Color c) {
-            super(x, y, null);
+            super(x, y, "");
             color = c;
             hp = 4;
         }
@@ -296,7 +338,7 @@ public class GameCanvas extends JComponent implements KeyListener {
         private final Rectangle2D.Double outline;
         
         public Rack(double x, double y, int lives, int blanks) {
-            super(x, y, null);
+            super(x, y, "");
             this.lives = lives;
             this.blanks = blanks;
             outline = new Rectangle2D.Double(x, y, 300, 100);
@@ -325,7 +367,7 @@ public class GameCanvas extends JComponent implements KeyListener {
         private final double width, height;
         private final Rectangle2D.Double outline;
         public TextBox(double x, double y, double w, double h, String txt) {
-            super(x, y, null);
+            super(x, y, "");
             text = txt;
             width = w;
             height = h;

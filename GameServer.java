@@ -65,6 +65,10 @@ public class GameServer {
 
         Collections.shuffle(bullets);
 
+        p1.addItem(Item.CIGARETTE);
+        p1.addItem(Item.CIGARETTE);
+        p2.addItem(Item.CIGARETTE);
+
         dmgTaken = 1;
         sendGameState();
     }
@@ -87,6 +91,24 @@ public class GameServer {
             startRound();
         }
         sendGameState();
+    }
+
+    public void handleItem(int playerNum, String[] data) {
+        Player player = getSelfPlayer(playerNum);
+        Item item = Item.getItem(Integer.parseInt(data[1]));
+        switch (item) {
+            // Ciggy
+            case CIGARETTE:
+                if (player.getHP() < 4) {
+                    player.heal(1);
+                    player.removeItem(item);
+                    sendGameState();
+                }
+                break;
+            default:
+                break;
+
+        }
     }
     
     public static void main(String[] args) {
@@ -200,6 +222,9 @@ public class GameServer {
                     switch (parts[0]) {
                         case "SHOOT":
                             handleShoot(playerNum, parts);
+                            break;
+                        case "ITEM":
+                            handleItem(playerNum, parts);
                             break;
                         default:
                             System.out.println(parts[0]);;

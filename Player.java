@@ -1,3 +1,5 @@
+
+
 public class Player {
     private int playerNum;
 
@@ -13,7 +15,7 @@ public class Player {
         hp = MAX_HP;
         items = new Item[8];
         for (int i = 0; i < 8; i++) {
-            items[i] = new Item(0);
+            items[i] = Item.EMPTY;
         }
         isImmune = false;
     }
@@ -24,8 +26,28 @@ public class Player {
         } else {
             hp -= dmg;
         }
-        System.out.println("ow");
-        System.out.println(hp);
+    }
+
+    public void heal(int amount) {
+        hp = Math.min(MAX_HP, hp + amount);
+    }
+
+    public void addItem(Item item) {
+        for (int i = 0; i < 8; i++) {
+            if (items[i] == Item.EMPTY) {
+                items[i] = item;
+                break;
+            }
+        }
+    }
+
+    public void removeItem(Item item) {
+        for (int i = 7; i >= 0; i--) {
+            if (items[i] == item) {
+                items[i] = Item.EMPTY;
+                break;
+            }
+        }
     }
 
     public int getHP() { return hp; }
