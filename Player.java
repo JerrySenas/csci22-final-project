@@ -32,6 +32,14 @@ public class Player {
         hp = Math.min(MAX_HP, hp + amount);
     }
 
+    public Item getItem(int itemSlot) {
+        if (itemSlot < 0 || itemSlot > 7) {
+            System.out.printf("Item slot %d is out of bounds.\n", itemSlot);
+            return null;
+        }
+        return items[itemSlot];
+    }
+
     public void addItem(Item item) {
         for (int i = 0; i < 8; i++) {
             if (items[i] == Item.EMPTY) {
@@ -41,13 +49,11 @@ public class Player {
         }
     }
 
-    public void removeItem(Item item) {
-        for (int i = 7; i >= 0; i--) {
-            if (items[i] == item) {
-                items[i] = Item.EMPTY;
-                break;
-            }
+    public void removeItem(int itemSlot) {
+        if (items[itemSlot] == Item.EMPTY) {
+            System.out.println("Item slot already empty.");
         }
+        items[itemSlot] = Item.EMPTY;
     }
 
     public int getHP() { return hp; }

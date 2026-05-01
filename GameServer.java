@@ -67,6 +67,7 @@ public class GameServer {
 
         p1.addItem(Item.CIGARETTE);
         p1.addItem(Item.CIGARETTE);
+        p1.addItem(Item.CIGARETTE);
         p2.addItem(Item.CIGARETTE);
 
         dmgTaken = 1;
@@ -95,13 +96,14 @@ public class GameServer {
 
     public void handleItem(int playerNum, String[] data) {
         Player player = getSelfPlayer(playerNum);
-        Item item = Item.getItem(Integer.parseInt(data[1]));
+        int itemSlot = Integer.parseInt(data[1]);
+        Item item = player.getItem(itemSlot);
         switch (item) {
             // Ciggy
             case CIGARETTE:
                 if (player.getHP() < 4) {
                     player.heal(1);
-                    player.removeItem(item);
+                    player.removeItem(itemSlot);
                     sendGameState();
                 }
                 break;

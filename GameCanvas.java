@@ -32,7 +32,6 @@ public class GameCanvas extends JComponent implements KeyListener {
         animTimer = new Timer(16, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                update();
                 repaint();
             }
             
@@ -86,21 +85,13 @@ public class GameCanvas extends JComponent implements KeyListener {
         animTimer.start();
     }
 
-    public void update() {
-        for (Sprite sprite : sprites) {
-            sprite.update();
-        }
-    }
-
     public void parseGameState(String[] gameState) {
         p1HPBar.setHP(Integer.parseInt(gameState[1]));
         p2HPBar.setHP(Integer.parseInt(gameState[2]));
 
         for (int i = 0; i < 16; i++) {
-            Item serverItem = Item.getItem(Integer.parseInt(gameState[5 + i]));
-            if (items[i].getItem() != serverItem) {
-                items[i] = new ItemSprite(i, serverItem.getItemNum());
-            }
+            int serverItemNum = Integer.parseInt(gameState[5 + i]);
+            items[i].changeItem(serverItemNum);
         }
         
         isTurn = Integer.parseInt(gameState[21]) == 1;
@@ -195,7 +186,7 @@ public class GameCanvas extends JComponent implements KeyListener {
                         }
                     } else if (selectedCol < 2) {
                         cmd = "ITEM;";
-                        cmd += items[4*selectedRow + selectedCol].itemNum;
+                        cmd += 4*selectedCol + selectedRow;
                         System.out.println(cmd);    
                     } else {
                         break;
@@ -261,11 +252,15 @@ public class GameCanvas extends JComponent implements KeyListener {
             return rowCol;
         }
 
+        public void changeItem(int itemNum) {
+            item = Item.getItem(itemNum);
+            this.itemNum = itemNum;
+            setImage(item.getSprite());
+        }
+
         @Override
         public void draw(Graphics2D g2d) {
-            if (itemNum != 0) {
-                super.draw(g2d);
-            }
+            super.draw(g2d);
             g2d.setColor(Color.BLACK);
             g2d.draw(outline);
         }

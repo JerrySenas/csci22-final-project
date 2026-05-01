@@ -54,6 +54,9 @@ public abstract class Sprite {
     }
 
     public void draw(Graphics2D g2d) {
+        if (image == null) {
+            return;
+        }
         AffineTransform reset = g2d.getTransform();
         g2d.rotate(
             Math.toRadians(angle),
