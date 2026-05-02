@@ -4,7 +4,10 @@ import javax.imageio.ImageIO;
 
 public enum Item {
     EMPTY (0, ""),
-    CIGARETTE (1, "assets/ciggy.png");
+    CIGARETTE (1, "assets/ciggy.png"),
+    BEER (2, "assets/beer.png"),
+    HANDCUFFS (3, "assets/handcuffs.png"),
+    GLASS (4, "assets/glass.png");
 
     private final int itemNum;
     private BufferedImage sprite;

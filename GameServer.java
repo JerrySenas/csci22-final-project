@@ -42,8 +42,6 @@ public class GameServer {
 
                 new Thread(new ReadFromClient(in, numPlayers)).start();
             }
-            startGame();
-            startRound();
         } catch (Exception e) {
         }
     }
@@ -65,13 +63,18 @@ public class GameServer {
 
         Collections.shuffle(bullets);
 
-        p1.addItem(Item.CIGARETTE);
-        p1.addItem(Item.CIGARETTE);
-        p1.addItem(Item.CIGARETTE);
-        p2.addItem(Item.CIGARETTE);
+        p1.clearItems();
+        p2.clearItems();
+        int numItems = (int) (Math.random() * 9);
+        for (int i = 0; i < numItems; i++) {
+            Item item = Item.getItem((int) (Math.random() * 5));
+            p1.addItem(item);
+            p2.addItem(item);
+        }
 
         dmgTaken = 1;
         sendGameState();
+        changeTurn();
     }
 
     public void handleShoot(int playerNum, String[] data) {
@@ -91,6 +94,7 @@ public class GameServer {
         if (numBullets == 0) {
             startRound();
         }
+        announce("SHOOT");
         sendGameState();
     }
 
@@ -99,23 +103,44 @@ public class GameServer {
         int itemSlot = Integer.parseInt(data[1]);
         Item item = player.getItem(itemSlot);
         switch (item) {
-            // Ciggy
             case CIGARETTE:
                 if (player.getHP() < 4) {
                     player.heal(1);
-                    player.removeItem(itemSlot);
-                    sendGameState();
                 }
                 break;
-            default:
+
+            case BEER:
+                bullets.remove(numBullets - 1);
+                numBullets--;
+                if (numBullets == 0) {
+                    startRound();
+                }
+                break;
+            
+            case HANDCUFFS:
+                if (getOpposingPlayer(playerNum).isSkippingNextTurn()) {
+                    return;
+                }
+
+                getOpposingPlayer(playerNum).setIsSkippingNextTurn(true);
                 break;
 
+            case GLASS:
+                announce("REVEAL;" + (bullets.get(numBullets - 1) ? 1 : 0));
+                break;
+
+            default:
+                return;
         }
+        player.removeItem(itemSlot);
+        sendGameState();
     }
     
     public static void main(String[] args) {
         GameServer gameServer = new GameServer();
         gameServer.acceptConnections();
+        gameServer.startGame();
+        gameServer.startRound();
     }
 
     public Player getSelfPlayer(int playerNum) { 
@@ -161,25 +186,55 @@ public class GameServer {
         } else {
             currentTurn = 1;
         }
+
+        int isP1Turn = currentTurn == 1 ? 1 : 0;
+        int isP2Turn = currentTurn == 2 ? 1 : 0;
+
+
+        announce("TURN;" + isP1Turn, "TURN;" + isP2Turn);
+        sendGameState();
+
+        if (getSelfPlayer(currentTurn).isSkippingNextTurn()) {
+            getSelfPlayer(currentTurn).setIsSkippingNextTurn(false);
+            changeTurn();
+        }
+    }
+
+    public void announce(String msg) {
+        try {
+            p1Out.writeUTF(msg);
+            p2Out.writeUTF(msg);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void announce(String msg1, String msg2) {
+        try {
+            p1Out.writeUTF(msg1);
+            p2Out.writeUTF(msg2);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void sendGameState() {
         String serializedStateForP1 = "STATE;";
         String serializedStateForP2 = "STATE;";
-        // HP;enemyHP;isImmune;isEnemyImmune;Items(8);EnemyItems(8);Turn;Lives;Blanks
+        // HP;enemyHP;isSkipping;isEnemySkipping;Items(8);EnemyItems(8);Lives;Blanks
         serializedStateForP1 += String.format(
             "%d;%d;%d;%d;",
             p1.getHP(),
             p2.getHP(),
-            p1.isImmune() ? 1 : 0,
-            p2.isImmune() ? 1 : 0
+            p1.isSkippingNextTurn() ? 1 : 0,
+            p2.isSkippingNextTurn() ? 1 : 0
         );
         serializedStateForP2 += String.format(
             "%d;%d;%d;%d;",
             p2.getHP(),
             p1.getHP(),
-            p2.isImmune() ? 1 : 0,
-            p1.isImmune() ? 1 : 0
+            p2.isSkippingNextTurn() ? 1 : 0,
+            p1.isSkippingNextTurn() ? 1 : 0
         );
 
         String temp1 = "";
@@ -196,16 +251,10 @@ public class GameServer {
         serializedStateForP1 += temp2;
         serializedStateForP2 += temp1;
 
-        serializedStateForP1 += currentTurn == 1 ? "1;" : "0;";
-        serializedStateForP2 += currentTurn == 2 ? "1;" : "0;";
-
         serializedStateForP1 += String.format("%d;%d", getLives(), getBlanks());
         serializedStateForP2 += String.format("%d;%d", getLives(), getBlanks());
-        try {
-            p1Out.writeUTF(serializedStateForP1);
-            p2Out.writeUTF(serializedStateForP2);
-        } catch (Exception e) {
-        }
+
+        announce(serializedStateForP1, serializedStateForP2);
     }
 
     private class ReadFromClient implements Runnable {

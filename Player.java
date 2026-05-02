@@ -8,6 +8,7 @@ public class Player {
     private Item[] items;
 
     private boolean isImmune;
+    private boolean isSkippingNextTurn;
     
     public Player(int pNum) {
         playerNum = pNum;
@@ -18,6 +19,7 @@ public class Player {
             items[i] = Item.EMPTY;
         }
         isImmune = false;
+        isSkippingNextTurn = false;
     }
 
     public void takeDamage(int dmg) {
@@ -58,5 +60,13 @@ public class Player {
 
     public int getHP() { return hp; }
     public boolean isImmune() { return isImmune; }
+    public boolean isSkippingNextTurn() { return isSkippingNextTurn; }
     public Item[] getItems() { return items; }
+
+    public void clearItems() {
+        for (int i = 0; i < 8; i++) {
+            items[i] = Item.EMPTY;
+        }
+    }
+    public void setIsSkippingNextTurn(boolean skip) { isSkippingNextTurn = skip; }
 }

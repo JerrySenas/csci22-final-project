@@ -24,6 +24,7 @@ public class GameCanvas extends JComponent implements KeyListener {
     private static final int MAX_ROWS = MAX_ITEMS / 2;
     private static final int MAX_COLS = 2 * MAX_ITEMS / MAX_ROWS;
     private boolean isTurn;
+    private boolean turnChanged;
     
     private Timer animTimer;
     private DataOutputStream writeToServer;
@@ -40,6 +41,7 @@ public class GameCanvas extends JComponent implements KeyListener {
         selectedRow = 0;
         selectedCol = 0;
         isTurn = false;
+        turnChanged = false;
 
         sprites = new ArrayList<>();
         items = new ItemSprite[16];
@@ -86,23 +88,47 @@ public class GameCanvas extends JComponent implements KeyListener {
     }
 
     public void parseGameState(String[] gameState) {
-        p1HPBar.setHP(Integer.parseInt(gameState[1]));
-        p2HPBar.setHP(Integer.parseInt(gameState[2]));
+        p1HPBar.hp = Integer.parseInt(gameState[1]);
+        p2HPBar.hp = Integer.parseInt(gameState[2]);
+
+        p1HPBar.isSkipping = Integer.parseInt(gameState[3]) == 1;
+        p2HPBar.isSkipping = Integer.parseInt(gameState[4]) == 1;
 
         for (int i = 0; i < 16; i++) {
             int serverItemNum = Integer.parseInt(gameState[5 + i]);
             items[i].changeItem(serverItemNum);
         }
-        
-        isTurn = Integer.parseInt(gameState[21]) == 1;
+
+        rack.setLives(Integer.parseInt(gameState[21]));
+        rack.setBlanks(Integer.parseInt(gameState[22]));
+
+        // if (turnChanged) {
+        //     lockout(1000);
+        //     turnChanged = false;
+        // }
+    }
+
+    public void changeTurn(String[] data) {
+        isTurn = Integer.parseInt(data[1]) == 1;
+        turnChanged = true;
+
+        p1HPBar.isTurn = false;
+        p2HPBar.isTurn = false;
         if (isTurn) {
             flavorBox.setText("It's your turn. Time to make your choice.");
+            p1HPBar.isTurn = true;
         } else {
             flavorBox.setText("You look over the table nervously...");
-
+            p2HPBar.isTurn = true;
         }
-        rack.setLives(Integer.parseInt(gameState[22]));
-        rack.setBlanks(Integer.parseInt(gameState[23]));
+    }
+
+    public void lockout(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -308,40 +334,64 @@ public class GameCanvas extends JComponent implements KeyListener {
     private class HPBar extends Sprite {
         private int hp;
         private Color color;
+        private boolean isTurn;
+        private boolean isSkipping;
         public HPBar(double x, double y, Color c) {
             super(x, y, "");
             color = c;
             hp = 4;
+            isTurn = false;
+            isSkipping = false;
         }
 
         @Override
         public void draw(Graphics2D g2d) {
-            g2d.setColor(Color.BLACK);
+            if (isTurn) {
+                g2d.setStroke(new BasicStroke(3));
+            }
+            g2d.setColor(color);
             g2d.draw(new Rectangle2D.Double(getX(), getY(), 300, 110));
+            
+            g2d.setColor(Color.BLUE);
+            if (isSkipping) {
+                g2d.setColor(Color.RED);
+            }
+
             for (int i = 0; i < hp; i++) {
-                g2d.setColor(color);
                 g2d.draw(new Ellipse2D.Double(getX() + 25 + i*65, getY() + 30, 50, 50));
             }
+            g2d.setStroke(new BasicStroke(1));
         }
-
-        public void setHP(int newHP) { hp = newHP; }
     }
 
     private class Rack extends Sprite {
         private int lives;
         private int blanks;
+        private boolean revealed;
+        private boolean isRevealedLive;
         private final Rectangle2D.Double outline;
         
         public Rack(double x, double y, int lives, int blanks) {
             super(x, y, "");
             this.lives = lives;
             this.blanks = blanks;
+            revealed = false;
+            isRevealedLive = false;
             outline = new Rectangle2D.Double(x, y, 300, 100);
         }
 
         @Override
         public void draw(Graphics2D g2d) {
             g2d.setColor(Color.BLACK);
+            if (revealed) {
+                g2d.setStroke(new BasicStroke(3));
+                if (isRevealedLive) {
+                    g2d.draw(new Rectangle2D.Double(getX() + 30, getY() + 25, 20, 50));
+                } else {
+                    g2d.draw(new Rectangle2D.Double(getX() + 30 + lives * 30, getY() + 25, 20, 50));
+                }
+                g2d.setStroke(new BasicStroke(1));
+            }
             g2d.draw(outline);
             for (int i = 0; i < lives + blanks; i++) {
                 if (i < lives) {
@@ -394,6 +444,19 @@ public class GameCanvas extends JComponent implements KeyListener {
                     switch (parts[0]) {
                         case "STATE":
                             parseGameState(parts);
+                            break;
+                        case "SHOOT":
+                            if (rack.revealed) {
+                                rack.revealed = false;
+                                rack.isRevealedLive = false;
+                            }
+                            break;
+                        case "TURN":
+                            changeTurn(parts);
+                            break;
+                        case "REVEAL":
+                            rack.revealed = true;
+                            rack.isRevealedLive = Integer.parseInt(parts[1]) == 1;
                             break;
                         default:
                             break;
