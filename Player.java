@@ -4,7 +4,7 @@ public class Player {
     private int playerNum;
 
     private int hp;
-    private static final int MAX_HP = 4;
+    public static final int MAX_HP = 4;
     private Item[] items;
 
     private boolean isImmune;

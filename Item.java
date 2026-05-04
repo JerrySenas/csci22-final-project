@@ -1,28 +1,19 @@
-import java.awt.image.BufferedImage;
-import java.io.File;
-import javax.imageio.ImageIO;
 
 public enum Item {
-    EMPTY (0, ""),
-    CIGARETTE (1, "assets/ciggy.png"),
-    BEER (2, "assets/beer.png"),
-    HANDCUFFS (3, "assets/handcuffs.png"),
-    GLASS (4, "assets/glass.png");
+    EMPTY (0, "", ""),
+    CIGARETTE (1, "assets/ciggy.png", "Heals 1 HP."),
+    BEER (2, "assets/beer.png", "Ejects the current shell."),
+    HANDCUFFS (3, "assets/handcuffs.png", "Skip the opponent's next turn."),
+    GLASS (4, "assets/glass.png", "Check the current round in the chamber.");
 
     private final int itemNum;
-    private BufferedImage sprite;
+    private final String spritePath;
+    private final String description;
 
-    private Item(int itemNum, String spritePath) {
+    private Item(int itemNum, String path, String desc) {
         this.itemNum = itemNum;
-        if (itemNum == 0) {
-            sprite = null;
-            return;
-        }
-        try {
-            sprite = ImageIO.read(new File(spritePath));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        spritePath = path;
+        description = desc;
     }
 
     public static Item getItem(int itemNum) {
@@ -35,5 +26,6 @@ public enum Item {
         return null;
     }
     public int getItemNum() { return itemNum; }
-    public BufferedImage getSprite() { return sprite; }
+    public String getSpritePath() { return spritePath; }
+    public String getDescription() { return description; }
 }

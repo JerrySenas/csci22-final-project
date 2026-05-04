@@ -79,10 +79,5 @@ public abstract class Sprite {
     public void setAngle(double a) {angle = a;}
     public void setTranslationSpeed(double ts) { translationSpeed = ts; }
     public void setImage(BufferedImage newImage) {image = newImage;}
-    public void setImage(String filepath) {
-        try {
-            image = ImageIO.read(new File(filepath));
-        } catch (Exception e) {
-        }
-    }
+    public void setImage(String filepath) { image = loadImage(filepath); }
 }

@@ -11,7 +11,11 @@ public class GameServer {
 
     private Player p1;
     private Player p2;
+    private int p1Score;
+    private int p2Score;
     private int currentTurn;
+    private ArrayList<Environment> envs;
+    private Environment currentEnvironment;
     
     private int numBullets;
     private ArrayList<Boolean> bullets;
@@ -49,28 +53,39 @@ public class GameServer {
     public void startGame() {
         p1 = new Player(1);
         p2 = new Player(2);
+        p1Score = 0;
+        p2Score = 0;
+        envs = new ArrayList<>(Arrays.asList(Environment.values()));
     }
 
     public void startRound() {
+        if (p1.getHP() == 0) {
+            p2Score++;
+        } else if (p2.getHP() == 0) {
+            p1Score++;
+        }
+
+        if (p1Score >= 3) {
+            announce("WIN", "LOSE");
+        } else if (p2Score >= 3) {
+            announce("LOSE", "WIN");
+        }
+
+        int envIdx = (int) (Math.random() * envs.size());
+        currentEnvironment = envs.get(envIdx);
+        envs.remove(envIdx);
+        announce("ENV;" + envIdx);
+
+        p1.heal(Player.MAX_HP);
+        p2.heal(Player.MAX_HP);
+        announce(String.format("NEW_ROUND;%d;%d", p1Score, p2Score), String.format("NEW_ROUND;%d;%d", p2Score, p1Score));
         currentTurn = Math.random() < 0.5 ? 1 : 2;
-        numBullets = (int) ((Math.random() * 7) + 2);
-        bullets = new ArrayList<>();
-        bullets.add(true);
-        bullets.add(false);
-        for (int i = 0; i < numBullets - 2; i++) {
-            bullets.add(Math.random() < 0.5);
-        }
+        startSet();
+    }
 
-        Collections.shuffle(bullets);
-
-        p1.clearItems();
-        p2.clearItems();
-        int numItems = (int) (Math.random() * 9);
-        for (int i = 0; i < numItems; i++) {
-            Item item = Item.getItem((int) (Math.random() * 5));
-            p1.addItem(item);
-            p2.addItem(item);
-        }
+    public void startSet() {
+        bullets = currentEnvironment.bulletSetup(this);
+        currentEnvironment.itemSetup(this);
 
         dmgTaken = 1;
         sendGameState();
@@ -92,10 +107,13 @@ public class GameServer {
         bullets.remove(numBullets - 1);
         numBullets--;
         if (numBullets == 0) {
-            startRound();
+            startSet();
         }
         announce("SHOOT");
         sendGameState();
+        if (p1.getHP() == 0 || p2.getHP() == 0) {
+            startRound();
+        }
     }
 
     public void handleItem(int playerNum, String[] data) {
@@ -179,6 +197,8 @@ public class GameServer {
 
         return blanks;
     }
+
+    public void setNumBullets(int num) { numBullets = num; }
 
     public void changeTurn() {
         if (currentTurn == 1) {
