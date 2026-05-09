@@ -30,9 +30,10 @@ public class GameCanvas extends JComponent implements KeyListener {
     private Environment currentEnvironment;
     
     private Timer animTimer;
+    private DataInputStream readFromServer;
     private DataOutputStream writeToServer;
 
-    public GameCanvas() {
+    public GameCanvas(Socket serverConnection) {
         animTimer = new Timer(16, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -82,13 +83,15 @@ public class GameCanvas extends JComponent implements KeyListener {
         sprites.add(flavorBox);
 
         try {
-            Socket socket = new Socket("localhost", 7777);
-            writeToServer = new DataOutputStream(socket.getOutputStream());
-            new Thread(new ReadFromServer(new DataInputStream(socket.getInputStream()))).start();
+            writeToServer = new DataOutputStream(serverConnection.getOutputStream());
+            readFromServer = new DataInputStream(serverConnection.getInputStream());
         } catch (IOException e) {
             System.out.println("Error in establishing connection with server: " + e);
         }
-
+    }
+    
+    public void startGameClient() {
+        new Thread(new ReadFromServer(readFromServer)).start();
         animTimer.start();
     }
 

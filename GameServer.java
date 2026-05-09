@@ -1,364 +1,198 @@
+import java.awt.event.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class GameServer {
     private ServerSocket ss;
-    private static final int REQUIRED_PLAYERS = 2;
-    private int numPlayers;
-    private DataOutputStream p1Out;
-    private DataOutputStream p2Out;
-
-    private Player p1;
-    private Player p2;
-    private int p1Score;
-    private int p2Score;
-    private int currentTurn;
-    private ArrayList<Environment> envs;
-    private Environment currentEnvironment;
-    
-    private int numBullets;
-    private ArrayList<Boolean> bullets;
-    private boolean enhanced;
-    private boolean casingActive;
-
-    private int dmgTaken;
+    private ArrayList<Integer> roomIDs;
+    private ArrayList<Room> rooms;
 
     public GameServer() {
         try {
-            numPlayers = 0;
+            roomIDs = new ArrayList<>();
+            rooms = new ArrayList<>();
+            roomIDs.add(0);
             ss = new ServerSocket(7777);
-        } catch (Exception e) {
+        } catch (IOException e) {
         }
     }
     
     public void acceptConnections() {
         try {
-            System.out.println("Awaiting players...");
-            while (numPlayers < REQUIRED_PLAYERS) {
-                numPlayers++;
-                
+            while (true) {
+                // System.out.println("Awaiting players...");
+                // while (numPlayers < REQUIRED_PLAYERS) {
+                //     numPlayers++;
+                    
+                //     Socket socket = ss.accept();
+                //     DataInputStream in = new DataInputStream(socket.getInputStream());
+                //     if (numPlayers == 1) {
+                //         p1Out = new DataOutputStream(socket.getOutputStream());
+                //     } else {
+                //         p2Out = new DataOutputStream(socket.getOutputStream());
+                //     }
+                // }
                 Socket socket = ss.accept();
-                DataInputStream in = new DataInputStream(socket.getInputStream());
-                if (numPlayers == 1) {
-                    p1Out = new DataOutputStream(socket.getOutputStream());
-                } else {
-                    p2Out = new DataOutputStream(socket.getOutputStream());
-                }
-
-                new Thread(new ReadFromClient(in, numPlayers)).start();
+                new Thread(new ClientHandler(socket)).start();
             }
         } catch (Exception e) {
         }
     }
 
-    public void startGame() {
-        p1 = new Player(1);
-        p2 = new Player(2);
-        p1Score = 0;
-        p2Score = 0;
-        envs = new ArrayList<>(Arrays.asList(Environment.values()));
-    }
-
-    public void startRound() {
-        if (p1.getHP() == 0) {
-            p2Score++;
-        } else if (p2.getHP() == 0) {
-            p1Score++;
-        }
-
-        if (p1Score >= 3) {
-            announce("WIN", "LOSE");
-        } else if (p2Score >= 3) {
-            announce("LOSE", "WIN");
-        }
-
-        int envIdx = (int) (Math.random() * envs.size());
-        envIdx = 4;
-        currentEnvironment = envs.get(envIdx);
-        envs.remove(envIdx);
-        announce("ENV;" + currentEnvironment.getEnvNum());
-
-        p1.heal(Player.MAX_HP);
-        p2.heal(Player.MAX_HP);
-        announce(String.format("NEW_ROUND;%d;%d", p1Score, p2Score), String.format("NEW_ROUND;%d;%d", p2Score, p1Score));
-        currentTurn = Math.random() < 0.5 ? 1 : 2;
-        startSet();
-    }
-
-    public void startSet() {
-        currentEnvironment.bulletSetup(this);
-        currentEnvironment.itemSetup(this);
-
-        dmgTaken = 1;
-        enhanced = false;
-        casingActive = false;
-        sendGameState();
-        changeTurn();
-    }
-
-    public void handleShoot(int playerNum, String[] data) {
-        int currentDmg = dmgTaken;
-        boolean currentBullet = bullets.get(numBullets - 1);
-
-        if (enhanced && currentBullet) {
-            currentDmg *= 2;
-        }
-
-        if (data[1].equals("self")) {
-            if (currentBullet) {
-                getSelfPlayer(playerNum).takeDamage(currentDmg);
-                changeTurn();
-            } else if (enhanced) {
-                getSelfPlayer(playerNum).setIsImmune(true);
+    private Room findRoom(int roomID) {
+        for (Room room : rooms) {
+            if (room.roomID == roomID) {
+                return room;
             }
-        } else {
-            if (bullets.get(numBullets - 1)) {
-                getOpposingPlayer(playerNum).takeDamage(currentDmg);
-            } else if (enhanced) {
-                getOpposingPlayer(playerNum).setIsImmune(true);
-            }
-            changeTurn();
         }
-        
-        if (enhanced) {
-            enhanced = false;
-        }
-
-        if (casingActive) {
-            dmgTaken = 1;
-            casingActive = false;
-            announce("PLUS_DMG;RESET");
-        }
-
-        decrementBullets();
-
-        sendGameState();
-        if (p1.getHP() == 0 || p2.getHP() == 0) {
-            startRound();
-        }
+        return null;
     }
 
-    public void handleItem(int playerNum, String[] data) {
-        Player player = getSelfPlayer(playerNum);
-        int itemSlot = Integer.parseInt(data[1]);
-        Item item = player.getItem(itemSlot);
-        switch (item) {
-            case CIGARETTE:
-                if (player.getHP() < 4) {
-                    player.heal(1);
-                    break;
-                } else {
-                    return;
-                }
-
-            case BEER:
-                if (numBullets <= 1) {
-                    return;
-                }
-                decrementBullets();
-                break;
-            
-            case HANDCUFFS:
-                if (getOpposingPlayer(playerNum).isSkippingNextTurn()) {
-                    return;
-                }
-
-                getOpposingPlayer(playerNum).setIsSkippingNextTurn(true);
-                break;
-
-            case GLASS:
-                announce("REVEAL;" + (bullets.get(numBullets - 1) ? 1 : 0));
-                break;
-            
-            case REVERSE:
-                bullets.set(numBullets - 1, !bullets.get(numBullets - 1));
-                break;
-
-            case CASING:
-                dmgTaken++;
-                casingActive = true;
-                announce("PLUS_DMG;ADD");
-                break;
-
-            default:
-                return;
-        }
-        player.removeItem(itemSlot);
-        currentEnvironment.onItemUse(this, item);
-        sendGameState();
+    private void removeRoom(Room room) {
+        rooms.remove(room);
+        roomIDs.remove((Integer) room.roomID);
+        System.out.printf("[%d] Room destroyed.\n", room.roomID);
     }
 
-    public void enhanceBullet() {
-        enhanced = true;
-        announce("ENHANCE;");
-    }
-    
     public static void main(String[] args) {
         GameServer gameServer = new GameServer();
         gameServer.acceptConnections();
-        gameServer.startGame();
-        gameServer.startRound();
     }
 
-    public Player getSelfPlayer(int playerNum) { 
-        if (playerNum == 1) {
-            return p1;
-        } else {
-            return p2;
+    private class Room {
+        private int numPlayers;
+        private int roomID;
+        private DataInputStream p1In;
+        private DataInputStream p2In;
+        private DataOutputStream p1Out;
+        private DataOutputStream p2Out;
+
+        public Room(DataInputStream in, DataOutputStream out) {
+            int id = 0;
+            while (roomIDs.contains(id)) {
+                id = ThreadLocalRandom.current().nextInt(10000, 100000);
+            }
+            roomID = id;
+            roomIDs.add(roomID);
+            
+            p1In = in;
+            p1Out = out;
+            numPlayers = 1;
+            System.out.printf("[%d] Room created.\n", roomID);
         }
-    }
 
-    public Player getOpposingPlayer(int playerNum) {
-        if (playerNum == 1) {
-            return p2;
-        } else {
-            return p1;
-        }
-    }
-
-    public int getNumBullets() { return numBullets; }
-
-    public int getLives() {
-        int lives = 0;
-        for (boolean bullet : bullets) {
-            if (bullet) {
-                lives += 1;
+        public boolean p2Join(DataInputStream in, DataOutputStream out) {
+            if (p2In == null) {
+                p2In = in;
+                p2Out = out;
+                numPlayers = 2;
+                System.out.printf("[%d] Player 2 joined.\n", roomID);
+                return true;
+            } else {
+                return false;
             }
         }
 
-        return lives;
-    }
-    public int getBlanks() {
-        int blanks = 0;
-        for (boolean bullet : bullets) {
-            if (!bullet) {
-                blanks += 1;
-            }
-        }
-
-        return blanks;
-    }
-
-    public void setBullets(ArrayList<Boolean> shots) {
-        bullets = shots;
-        numBullets = bullets.size();
-    }
-
-    public void decrementBullets() {
-        bullets.remove(numBullets - 1);
-        numBullets--;
-        currentEnvironment.onBulletChange(this);
-        announce("SHOOT");
-    }
-
-    public void changeTurn() {
-        if (currentTurn == 1) {
-            currentTurn = 2;
-        } else {
-            currentTurn = 1;
-        }
-
-        int isP1Turn = currentTurn == 1 ? 1 : 0;
-        int isP2Turn = currentTurn == 2 ? 1 : 0;
-
-
-        announce("TURN;" + isP1Turn, "TURN;" + isP2Turn);
-        sendGameState();
-
-        if (getSelfPlayer(currentTurn).isSkippingNextTurn()) {
-            getSelfPlayer(currentTurn).setIsSkippingNextTurn(false);
-            changeTurn();
-        }
-    }
-
-    public void announce(String msg) {
-        try {
-            p1Out.writeUTF(msg);
-            p2Out.writeUTF(msg);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void announce(String msg1, String msg2) {
-        try {
-            p1Out.writeUTF(msg1);
-            p2Out.writeUTF(msg2);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void sendGameState() {
-        String serializedStateForP1 = "STATE;";
-        String serializedStateForP2 = "STATE;";
-        // HP;enemyHP;isSkipping;isEnemySkipping;isImmune;isEnemyImmune;Items(8);EnemyItems(8);Lives;Blanks
-        serializedStateForP1 += String.format(
-            "%d;%d;%d;%d;%d;%d;",
-            p1.getHP(),
-            p2.getHP(),
-            p1.isSkippingNextTurn() ? 1 : 0,
-            p2.isSkippingNextTurn() ? 1 : 0,
-            p1.isImmune() ? 1 : 0,
-            p2.isImmune() ? 1 : 0
-        );
-        serializedStateForP2 += String.format(
-            "%d;%d;%d;%d;%d;%d;",
-            p2.getHP(),
-            p1.getHP(),
-            p2.isSkippingNextTurn() ? 1 : 0,
-            p1.isSkippingNextTurn() ? 1 : 0,
-            p2.isImmune() ? 1 : 0,
-            p1.isImmune() ? 1 : 0
-        );
-
-        String temp1 = "";
-        String temp2 = "";
-
-        for (Item item : p1.getItems()) {
-            serializedStateForP1 += item.getItemNum() + ";";
-            temp1 += item.getItemNum() + ";";
-        }
-        for (Item item : p2.getItems()) {
-            serializedStateForP2 += item.getItemNum() + ";";
-            temp2 += item.getItemNum() + ";";
-        }
-        serializedStateForP1 += temp2;
-        serializedStateForP2 += temp1;
-
-        serializedStateForP1 += String.format("%d;%d", getLives(), getBlanks());
-        serializedStateForP2 += String.format("%d;%d", getLives(), getBlanks());
-
-        announce(serializedStateForP1, serializedStateForP2);
-    }
-
-    private class ReadFromClient implements Runnable {
-        private DataInputStream dataIn;
-        private int playerNum;
-
-        public ReadFromClient(DataInputStream in, int pNum) {
-            dataIn = in;
-            playerNum = pNum;
-        }
-
-        public void run() {
-            try {
-                while (true) { 
-                    String[] parts = dataIn.readUTF().split(";");
-                    switch (parts[0]) {
-                        case "SHOOT":
-                            handleShoot(playerNum, parts);
-                            break;
-                        case "ITEM":
-                            handleItem(playerNum, parts);
-                            break;
-                        default:
-                            System.out.println(parts[0]);;
-                    }
+        public void startGame() {
+            Room roomRef = this;
+            Game game = new Game(p1Out, p2Out, new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent ae) {
+                    removeRoom(roomRef);
                 }
-            } catch (Exception e) {
+            });
+            game.startThreads(p1In, p2In);
+            game.startGame();
+        }
+    }
+
+    private class ClientHandler implements Runnable {
+        boolean running;
+        Socket socket;
+        DataInputStream socketIn;
+        DataOutputStream socketOut;
+        Room currentRoom;
+
+        ClientHandler(Socket s) {
+            running = true;
+            socket = s;
+            try {
+                socketIn = new DataInputStream(socket.getInputStream());
+                socketOut = new DataOutputStream(socket.getOutputStream());
+                // Connection established
+                socketOut.writeBoolean(true);
+            } catch (IOException e) {
+                System.out.println("Client connection error:");
                 e.printStackTrace();
+            }
+        }
+        
+        @Override
+        public void run() {
+            while (running) {
+                try {
+                    String[] cmd = socketIn.readUTF().split(";");
+                    
+                    switch (cmd[0]) {
+                        case "HOST":
+                            currentRoom = new Room(socketIn, socketOut);
+                            rooms.add(currentRoom);
+                            socketOut.writeUTF("ROOM;CREATED;" + currentRoom.roomID);
+
+                            while (currentRoom.numPlayers < 2) { 
+                                try {
+                                    socketOut.writeUTF("u alive bro");
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                }
+                            }
+                            running = false;
+                            currentRoom.p1Out.writeUTF("P2_JOINED");
+                            currentRoom.startGame();
+                            break;
+        
+                        case "JOIN":
+                            int roomID;
+        
+                            try {
+                                roomID = Integer.parseInt(cmd[1]);
+                            } catch (NumberFormatException e) {
+                                socketOut.writeUTF("CONNECT;INVALID_ROOM_ID");
+                                break;
+                            }
+        
+                            Room room = findRoom(roomID);
+        
+                            if (room == null || roomID == 0) {
+                                socketOut.writeUTF("CONNECT;ROOM_NOT_FOUND");
+                                break;
+                            }
+        
+                            if (!room.p2Join(socketIn, socketOut)) {
+                                socketOut.writeUTF("CONNECT;ROOM_FULL");
+                                break;
+                            }
+        
+                            if (room.numPlayers < 2) {
+                                socketOut.writeUTF("CONNECT;HOST_MISSING");
+                            }
+                            socketOut.writeUTF("CONNECT;SUCCESS");
+                            running = false;
+                            break;
+        
+                        default:
+                            System.out.println("ERROR;INVALID");
+                    }
+                } catch ( EOFException | SocketException e ) {
+                    System.out.println("Player disconnected");
+                    if (currentRoom != null) { removeRoom(currentRoom); }
+                    running = false;
+                } catch (IOException e) {
+                    running = false;
+                    e.printStackTrace();
+                }
             }
         }
     }

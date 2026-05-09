@@ -19,7 +19,7 @@ public enum Environment {
         description = desc;
     }
 
-    public void bulletSetup(GameServer game) {
+    public void bulletSetup(Game game) {
         int numBullets = (int) ((Math.random() * 7) + 2);
         ArrayList<Boolean> bullets = new ArrayList<>();
 
@@ -49,7 +49,7 @@ public enum Environment {
         game.setBullets(bullets);
     }
 
-    public void itemSetup(GameServer game) {
+    public void itemSetup(Game game) {
         if (this != ITEM_CARRYOVER) {
             game.getSelfPlayer(1).clearItems();
             game.getSelfPlayer(2).clearItems();
@@ -74,7 +74,7 @@ public enum Environment {
         }
     }
 
-    public void onBulletChange(GameServer game) {
+    public void onBulletChange(Game game) {
         switch (this) {
             case WHISPER:
                 if (game.getNumBullets() > 0 && game.getNumBullets() % 4 == 1) {
@@ -91,7 +91,7 @@ public enum Environment {
         }
     }
 
-    public void onItemUse(GameServer game, Item item) {
+    public void onItemUse(Game game, Item item) {
         switch (this) {
             case CHAOS:
                 itemSetup(game);

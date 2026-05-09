@@ -1,3 +1,4 @@
+import java.net.Socket;
 import javax.swing.*;
 
 public class GameFrame {
@@ -9,11 +10,11 @@ public class GameFrame {
 
     private GameCanvas gameCanvas;
 
-    public GameFrame() {
+    public GameFrame(Socket serverConnection) {
         frame = new JFrame();
         width = 1024;
         height = 768;
-        gameCanvas = new GameCanvas();
+        gameCanvas = new GameCanvas(serverConnection);
     }
 
     public void setupGUI() {
@@ -29,5 +30,7 @@ public class GameFrame {
         frame.addKeyListener(gameCanvas);
         frame.setFocusable(true);
         frame.requestFocusInWindow();
+
+        gameCanvas.startGameClient();
     }
 }
