@@ -26,7 +26,7 @@ public class Player {
         if (isImmune) {
             isImmune = false;
         } else {
-            hp -= dmg;
+            hp = Math.max(0, hp - dmg);
         }
     }
 
@@ -69,4 +69,5 @@ public class Player {
         }
     }
     public void setIsSkippingNextTurn(boolean skip) { isSkippingNextTurn = skip; }
+    public void setIsImmune(boolean immune) { isImmune = true; }
 }

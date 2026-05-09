@@ -2,6 +2,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
@@ -98,13 +99,16 @@ public class GameCanvas extends JComponent implements KeyListener {
         p1HPBar.isSkipping = Integer.parseInt(gameState[3]) == 1;
         p2HPBar.isSkipping = Integer.parseInt(gameState[4]) == 1;
 
+        p1HPBar.isImmune = Integer.parseInt(gameState[5]) == 1;
+        p2HPBar.isImmune = Integer.parseInt(gameState[6]) == 1;
+
         for (int i = 0; i < 16; i++) {
-            int serverItemNum = Integer.parseInt(gameState[5 + i]);
+            int serverItemNum = Integer.parseInt(gameState[7 + i]);
             items[i].changeItem(serverItemNum);
         }
 
-        rack.setLives(Integer.parseInt(gameState[21]));
-        rack.setBlanks(Integer.parseInt(gameState[22]));
+        rack.setLives(Integer.parseInt(gameState[23]));
+        rack.setBlanks(Integer.parseInt(gameState[24]));
 
         // if (turnChanged) {
         //     lockout(1000);
@@ -131,7 +135,7 @@ public class GameCanvas extends JComponent implements KeyListener {
         if (item == Item.EMPTY) {
             flavorBox.setText(String.format("Current environment: %s\n\n - %s", currentEnvironment.getName(), currentEnvironment.getDescription()));
         } else {
-            flavorBox.setText(item.getDescription());
+            flavorBox.setText(String.format("%s\n\n - %s", item.getName(), item.getDescription()));
         }
     }
 
@@ -240,8 +244,12 @@ public class GameCanvas extends JComponent implements KeyListener {
                         }
                     } else if (selectedCol < 2) {
                         cmd = "ITEM;";
-                        cmd += 4*selectedCol + selectedRow;
-                        System.out.println(cmd);    
+                        int itemIdx = 4*selectedCol + selectedRow;
+                        if (items[itemIdx].getItem() == Item.REVERSE) {
+                            rack.isRevealedLive = !rack.isRevealedLive;
+                        }
+                        cmd += itemIdx;
+                        System.out.println(cmd);
                     } else {
                         break;
                     }
@@ -365,12 +373,33 @@ public class GameCanvas extends JComponent implements KeyListener {
         private Color color;
         private boolean isTurn;
         private boolean isSkipping;
+        private boolean isImmune;
+
+        private final BufferedImage lockedStatusImg;
+        private final BufferedImage immuneStatusImg;
+
         public HPBar(double x, double y, Color c) {
             super(x, y, "");
             color = c;
             hp = 4;
             isTurn = false;
-            isSkipping = false;
+            isSkipping = true;
+            isImmune = true;
+
+            lockedStatusImg = Sprite.loadImage("assets/status/lock.png");
+            immuneStatusImg = Sprite.loadImage("assets/status/immune.png");
+        }
+
+        public void drawStatus(Graphics2D g2d) {
+            int xOffset = 10;
+            if (isSkipping) {
+                g2d.drawImage(lockedStatusImg, null, (int) getX() + xOffset, (int) getY() + 5);
+                xOffset += 30;
+            }
+            if (isImmune) {
+                g2d.drawImage(immuneStatusImg, null, (int) getX() + xOffset, (int) getY() + 5);
+                xOffset += 30;
+            }
         }
 
         @Override
@@ -390,6 +419,8 @@ public class GameCanvas extends JComponent implements KeyListener {
                 g2d.draw(new Ellipse2D.Double(getX() + 25 + i*65, getY() + 30, 50, 50));
             }
             g2d.setStroke(new BasicStroke(1));
+
+            drawStatus(g2d);
         }
     }
 
@@ -417,32 +448,37 @@ public class GameCanvas extends JComponent implements KeyListener {
     private class Rack extends Sprite {
         private int lives;
         private int blanks;
+        private int dmgModifier;
         private boolean revealed;
+        private boolean enhanced;
         private boolean isRevealedLive;
         private final Rectangle2D.Double outline;
+        private final BufferedImage plusMarks;
         
         public Rack(double x, double y, int lives, int blanks) {
             super(x, y, "");
             this.lives = lives;
             this.blanks = blanks;
+            dmgModifier = 0;
             revealed = false;
+            enhanced = false;
             isRevealedLive = false;
             outline = new Rectangle2D.Double(x, y, 300, 100);
+            plusMarks = Sprite.loadImage("assets/status/plus1.png");
         }
 
         @Override
         public void draw(Graphics2D g2d) {
-            g2d.setColor(Color.BLACK);
-            if (revealed) {
+            if (enhanced) {
+                g2d.setColor(Color.MAGENTA);
                 g2d.setStroke(new BasicStroke(3));
-                if (isRevealedLive) {
-                    g2d.draw(new Rectangle2D.Double(getX() + 30, getY() + 25, 20, 50));
-                } else {
-                    g2d.draw(new Rectangle2D.Double(getX() + 30 + lives * 30, getY() + 25, 20, 50));
-                }
+            } else {
+                g2d.setColor(Color.BLACK);
                 g2d.setStroke(new BasicStroke(1));
             }
             g2d.draw(outline);
+            g2d.setStroke(new BasicStroke(1));
+
             for (int i = 0; i < lives + blanks; i++) {
                 if (i < lives) {
                     g2d.setColor(Color.RED);
@@ -450,6 +486,22 @@ public class GameCanvas extends JComponent implements KeyListener {
                     g2d.setColor(Color.BLUE);
                 }
                 g2d.draw(new Rectangle2D.Double(getX() + 30 + i * 30, getY() + 25, 20, 50));
+            }
+
+            if (revealed) {
+                g2d.setStroke(new BasicStroke(3));
+                if (isRevealedLive) {
+                    g2d.setColor(Color.RED);
+                    g2d.draw(new Rectangle2D.Double(getX() + 30, getY() + 25, 20, 50));
+                } else {
+                    g2d.setColor(Color.BLUE);
+                    g2d.draw(new Rectangle2D.Double(getX() + 30 + lives * 30, getY() + 25, 20, 50));
+                }
+                g2d.setStroke(new BasicStroke(1));
+            }
+
+            for (int i = 0; i < dmgModifier; i++) {
+                g2d.drawImage(plusMarks, null, (int) getX() + 10 + 5*i, (int) getY() + 10);
             }
         }
 
@@ -482,6 +534,9 @@ public class GameCanvas extends JComponent implements KeyListener {
                                 rack.revealed = false;
                                 rack.isRevealedLive = false;
                             }
+                            if (rack.enhanced) {
+                                rack.enhanced = false;
+                            }
                             break;
                         case "TURN":
                             changeTurn(parts);
@@ -489,6 +544,17 @@ public class GameCanvas extends JComponent implements KeyListener {
                         case "REVEAL":
                             rack.revealed = true;
                             rack.isRevealedLive = Integer.parseInt(parts[1]) == 1;
+                            flavorBox.setText(String.format("A %s round has been revealed", rack.isRevealedLive ? "live" : "blank"));
+                            break;
+                        case "ENHANCE":
+                            rack.enhanced = true;
+                            break;
+                        case "PLUS_DMG":
+                            if (parts[1].equals("ADD")) {
+                                rack.dmgModifier++;
+                            } else {
+                                rack.dmgModifier = 0;
+                            }
                             break;
                         case "ENV":
                             currentEnvironment = Environment.getEnvironment(Integer.parseInt(parts[1]));

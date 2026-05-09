@@ -23,17 +23,10 @@ public class TextBox extends Sprite {
         FontMetrics fm = g2d.getFontMetrics();
         String[] lines = text.split("\n");
 
-        int maxWidth = 0;
-        for (String line : lines) {
-            if (fm.stringWidth(line) > maxWidth) {
-                maxWidth = fm.stringWidth(line);
-            }
-        }
-
-        int xOffset = (width - maxWidth) / 2;
         int totalHeight = fm.getHeight() * lines.length;
         int yOffset = (height - totalHeight) / 2 + fm.getAscent();
         for (String line : lines) {
+            int xOffset = (width - fm.stringWidth(line)) / 2;
             g2d.drawString(line, (int) getX() + xOffset, (int) getY() + yOffset);
             yOffset += fm.getHeight();
         }

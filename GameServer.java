@@ -19,6 +19,8 @@ public class GameServer {
     
     private int numBullets;
     private ArrayList<Boolean> bullets;
+    private boolean enhanced;
+    private boolean casingActive;
 
     private int dmgTaken;
 
@@ -72,9 +74,10 @@ public class GameServer {
         }
 
         int envIdx = (int) (Math.random() * envs.size());
+        envIdx = 4;
         currentEnvironment = envs.get(envIdx);
         envs.remove(envIdx);
-        announce("ENV;" + envIdx);
+        announce("ENV;" + currentEnvironment.getEnvNum());
 
         p1.heal(Player.MAX_HP);
         p2.heal(Player.MAX_HP);
@@ -84,32 +87,52 @@ public class GameServer {
     }
 
     public void startSet() {
-        bullets = currentEnvironment.bulletSetup(this);
+        currentEnvironment.bulletSetup(this);
         currentEnvironment.itemSetup(this);
 
         dmgTaken = 1;
+        enhanced = false;
+        casingActive = false;
         sendGameState();
         changeTurn();
     }
 
     public void handleShoot(int playerNum, String[] data) {
+        int currentDmg = dmgTaken;
+        boolean currentBullet = bullets.get(numBullets - 1);
+
+        if (enhanced && currentBullet) {
+            currentDmg *= 2;
+        }
+
         if (data[1].equals("self")) {
-            if (bullets.get(numBullets - 1)) {
-                getSelfPlayer(playerNum).takeDamage(dmgTaken);
+            if (currentBullet) {
+                getSelfPlayer(playerNum).takeDamage(currentDmg);
                 changeTurn();
+            } else if (enhanced) {
+                getSelfPlayer(playerNum).setIsImmune(true);
             }
         } else {
             if (bullets.get(numBullets - 1)) {
-                getOpposingPlayer(playerNum).takeDamage(dmgTaken);
+                getOpposingPlayer(playerNum).takeDamage(currentDmg);
+            } else if (enhanced) {
+                getOpposingPlayer(playerNum).setIsImmune(true);
             }
             changeTurn();
         }
-        bullets.remove(numBullets - 1);
-        numBullets--;
-        if (numBullets == 0) {
-            startSet();
+        
+        if (enhanced) {
+            enhanced = false;
         }
-        announce("SHOOT");
+
+        if (casingActive) {
+            dmgTaken = 1;
+            casingActive = false;
+            announce("PLUS_DMG;RESET");
+        }
+
+        decrementBullets();
+
         sendGameState();
         if (p1.getHP() == 0 || p2.getHP() == 0) {
             startRound();
@@ -124,15 +147,16 @@ public class GameServer {
             case CIGARETTE:
                 if (player.getHP() < 4) {
                     player.heal(1);
+                    break;
+                } else {
+                    return;
                 }
-                break;
 
             case BEER:
-                bullets.remove(numBullets - 1);
-                numBullets--;
-                if (numBullets == 0) {
-                    startRound();
+                if (numBullets <= 1) {
+                    return;
                 }
+                decrementBullets();
                 break;
             
             case HANDCUFFS:
@@ -146,12 +170,28 @@ public class GameServer {
             case GLASS:
                 announce("REVEAL;" + (bullets.get(numBullets - 1) ? 1 : 0));
                 break;
+            
+            case REVERSE:
+                bullets.set(numBullets - 1, !bullets.get(numBullets - 1));
+                break;
+
+            case CASING:
+                dmgTaken++;
+                casingActive = true;
+                announce("PLUS_DMG;ADD");
+                break;
 
             default:
                 return;
         }
         player.removeItem(itemSlot);
+        currentEnvironment.onItemUse(this, item);
         sendGameState();
+    }
+
+    public void enhanceBullet() {
+        enhanced = true;
+        announce("ENHANCE;");
     }
     
     public static void main(String[] args) {
@@ -177,6 +217,8 @@ public class GameServer {
         }
     }
 
+    public int getNumBullets() { return numBullets; }
+
     public int getLives() {
         int lives = 0;
         for (boolean bullet : bullets) {
@@ -198,7 +240,17 @@ public class GameServer {
         return blanks;
     }
 
-    public void setNumBullets(int num) { numBullets = num; }
+    public void setBullets(ArrayList<Boolean> shots) {
+        bullets = shots;
+        numBullets = bullets.size();
+    }
+
+    public void decrementBullets() {
+        bullets.remove(numBullets - 1);
+        numBullets--;
+        currentEnvironment.onBulletChange(this);
+        announce("SHOOT");
+    }
 
     public void changeTurn() {
         if (currentTurn == 1) {
@@ -241,20 +293,24 @@ public class GameServer {
     public void sendGameState() {
         String serializedStateForP1 = "STATE;";
         String serializedStateForP2 = "STATE;";
-        // HP;enemyHP;isSkipping;isEnemySkipping;Items(8);EnemyItems(8);Lives;Blanks
+        // HP;enemyHP;isSkipping;isEnemySkipping;isImmune;isEnemyImmune;Items(8);EnemyItems(8);Lives;Blanks
         serializedStateForP1 += String.format(
-            "%d;%d;%d;%d;",
+            "%d;%d;%d;%d;%d;%d;",
             p1.getHP(),
             p2.getHP(),
             p1.isSkippingNextTurn() ? 1 : 0,
-            p2.isSkippingNextTurn() ? 1 : 0
+            p2.isSkippingNextTurn() ? 1 : 0,
+            p1.isImmune() ? 1 : 0,
+            p2.isImmune() ? 1 : 0
         );
         serializedStateForP2 += String.format(
-            "%d;%d;%d;%d;",
+            "%d;%d;%d;%d;%d;%d;",
             p2.getHP(),
             p1.getHP(),
             p2.isSkippingNextTurn() ? 1 : 0,
-            p1.isSkippingNextTurn() ? 1 : 0
+            p1.isSkippingNextTurn() ? 1 : 0,
+            p2.isImmune() ? 1 : 0,
+            p1.isImmune() ? 1 : 0
         );
 
         String temp1 = "";
