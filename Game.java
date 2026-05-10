@@ -2,6 +2,7 @@ import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.SocketException;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class Game {
     private Player p1;
@@ -62,11 +63,13 @@ public class Game {
             return;
         }
 
-        int envIdx = (int) (Math.random() * envs.size());
-        envIdx = 8;
+        int envIdx = ThreadLocalRandom.current().nextInt(0, envs.size());
         currentEnvironment = envs.get(envIdx);
         envs.remove(envIdx);
         announce("ENV;" + currentEnvironment.getEnvNum());
+
+        p1.setMaxRestorableHP(Player.MAX_HP);
+        p2.setMaxRestorableHP(Player.MAX_HP);
 
         p1.heal(Player.MAX_HP);
         p2.heal(Player.MAX_HP);
@@ -98,13 +101,15 @@ public class Game {
             target = getSelfPlayer(playerNum);
             if (currentBullet) {
                 dealDamage(currentDmg, target);
-                changeTurn();
+                if (currentEnvironment != Environment.OMEN_SEVEN) {
+                    changeTurn();
+                }
             } else if (enhanced) {
                 target.setIsImmune(true);
             }
         } else {
             target = getOpposingPlayer(playerNum);
-            if (bullets.get(numBullets - 1)) {
+            if (currentBullet) {
                 dealDamage(currentDmg, target);
             } else if (enhanced) {
                 target.setIsImmune(true);
@@ -112,19 +117,18 @@ public class Game {
             changeTurn();
         }
         
-        if (enhanced) {
-            enhanced = false;
-        }
-        
         if (dmgModified) {
             dmgTaken = 1;
             dmgModified = false;
             announce("PLUS_DMG;RESET");
         }
-        
-        currentEnvironment.onShoot(this, currentBullet, getSelfPlayer(playerNum), target);
+
         decrementBullets();
+        currentEnvironment.onShoot(this, currentBullet, getSelfPlayer(playerNum), target);
         sendGameState();
+        if (numBullets <= 0) {
+            startSet();
+        }
     }
 
     public void handleItem(int playerNum, String[] data) {
@@ -133,7 +137,7 @@ public class Game {
         Item item = player.getItem(itemSlot);
         switch (item) {
             case CIGARETTE:
-                if (player.getHP() < 4) {
+                if (player.getHP() < player.getMaxRestorableHP()) {
                     player.heal(1);
                     break;
                 } else {
@@ -145,6 +149,9 @@ public class Game {
                     return;
                 }
                 decrementBullets();
+                if (numBullets <= 0) {
+                    startSet();
+                }
                 break;
             
             case HANDCUFFS:
@@ -156,11 +163,23 @@ public class Game {
                 break;
 
             case GLASS:
-                announce("REVEAL;" + (bullets.get(numBullets - 1) ? 1 : 0));
+                revealBullet();
                 break;
             
             case REVERSE:
                 bullets.set(numBullets - 1, !bullets.get(numBullets - 1));
+                break;
+
+            case MEDICINE:
+                int roll = ThreadLocalRandom.current().nextInt(1, 11);
+                if (roll < 5) {
+                    dealDamage(1, player);
+                } else if (roll < 9) {
+                    player.heal(2);
+                } else {
+                    player.heal(2);
+                    player.setIsImmune(true);
+                }
                 break;
 
             case CASING:
@@ -194,6 +213,9 @@ public class Game {
         player.removeItem(itemSlot);
         currentEnvironment.onItemUse(this, item, playerNum);
         sendGameState();
+        if (numBullets <= 0) {
+            startSet();
+        }
     }
 
     public void enhanceBullet() {
@@ -201,7 +223,21 @@ public class Game {
         announce("ENHANCE;");
     }
 
+    public void revealBullet() {
+        if (numBullets > 0) {
+            announce("REVEAL;" + (bullets.get(numBullets - 1) ? 1 : 0));
+        }
+    }
+
     public void dealDamage(int damage, Player target) {
+        if (currentEnvironment == Environment.OMEN_SIX) {
+            target.setMaxRestorableHP(target.getMaxRestorableHP() - 1);
+            sendGameState();
+            if (p1.getHP() == 0 || p2.getHP() == 0) {
+                startRound();
+            }
+            return;
+        }
         if (target.isImmune()) {
             target.setIsImmune(false);
             sendGameState();
@@ -225,6 +261,14 @@ public class Game {
 
     public Player getOpposingPlayer(int playerNum) {
         if (playerNum == 1) {
+            return p2;
+        } else {
+            return p1;
+        }
+    }
+
+    public Player getOpposingPlayer(Player self) {
+        if (p1 == self) {
             return p2;
         } else {
             return p1;
@@ -262,11 +306,11 @@ public class Game {
     public void decrementBullets() {
         bullets.remove(numBullets - 1);
         numBullets--;
+        if (enhanced) {
+            enhanced = false;
+        }
         announce("SHOOT");
         currentEnvironment.onBulletChange(this);
-        if (numBullets <= 0) {
-            startSet();
-        }
     }
 
     public void changeTurn() {
@@ -294,16 +338,16 @@ public class Game {
             p1Out.writeUTF(msg);
             p2Out.writeUTF(msg);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Announcement failed for at least 1 player. One of the players may have disconnected.");
         }
     }
-
+    
     public void announce(String msg1, String msg2) {
         try {
             p1Out.writeUTF(msg1);
             p2Out.writeUTF(msg2);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Announcement failed for at least 1 player. One of the players may have disconnected.");
         }
     }
 
@@ -362,9 +406,17 @@ public class Game {
         @Override
         public void run() {
             try {
-                while (true) { 
-                    String[] parts = dataIn.readUTF().split(";");
+                while (!gameEnded) { 
+                    String req = dataIn.readUTF();
+                    String[] parts = req.split(";");
                     switch (parts[0]) {
+                        case "CURSOR":
+                            if (playerNum == 1) {
+                                p2Out.writeUTF(req);
+                            } else {
+                                p1Out.writeUTF(req);
+                            }
+                            break;
                         case "SHOOT":
                             handleShoot(playerNum, parts);
                             break;
@@ -376,10 +428,9 @@ public class Game {
                     }
                 }
             } catch (SocketException e) {
-                if (!gameEnded) {
-                    endgameCallback.actionPerformed(null);
-                    gameEnded = true;
-                }
+                endgameCallback.actionPerformed(null);
+                announce("DISCONNECT;");
+                gameEnded = true;
             } catch (IOException e) {
                 e.printStackTrace();
             }

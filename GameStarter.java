@@ -38,6 +38,9 @@ public class GameStarter {
                         if (pubOrPrivRes.equals("1")) {
                             System.out.print("Room name: ");
                             String roomName = scanner.nextLine();
+                            if (roomName.equals("")) {
+                                roomName = "I'm too lazy to think of a proper room name";
+                            }
                             serverWrite.writeUTF("HOST;PUBLIC;" + roomName);
                         } else if (pubOrPrivRes.equals("2")) {
                             serverWrite.writeUTF("HOST;PRIVATE;;");

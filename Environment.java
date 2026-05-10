@@ -14,6 +14,11 @@ public enum Environment {
     OMEN_THREE(13, "Omen: Silence", "Every third item use deals 3 damage to yourself."),
     OMEN_FOUR(14, "Omen: Repose", "Shooting a blank to your opponent gives you 4 random items."),
     OMEN_FIVE(15, "Omen: Disdain", "Taking damage gives you a 'Claws of Ardent Disdain'."),
+    OMEN_SIX(16, "Omen: Unkilling", "Bullets reduce max HP by 1 instead of dealing damage."),
+    OMEN_SEVEN(17, "Omen: Lust", "Shooting yourself enhances the next bullet. Shooting yourself with a live bullet won't pass your turn."),
+    OMEN_EIGHT(18, "Omen: Usurpation", "Shooting anyone randomly steals one of your opponent's items."),
+    OMEN_NINE(19, "Omen: Truth", "The current bullet is always revealed."),
+    OMEN_TEN(10, "Omen: Craving", "Start with a full inventory each time the rack is reset."),
     ;
 
     private final int envNum;
@@ -56,6 +61,9 @@ public enum Environment {
 
         Collections.shuffle(bullets);
         game.setBullets(bullets);
+        if (this == OMEN_NINE) {
+            game.revealBullet();
+        }
     }
 
     public void itemSetup(Game game) {
@@ -82,6 +90,9 @@ public enum Environment {
                 }
                 numItems = ThreadLocalRandom.current().nextInt(2, 9);
                 break;
+            case OMEN_TEN:
+                numItems = 8;
+                break;
             default:
                 numItems = ThreadLocalRandom.current().nextInt(0, 9);
                 break;
@@ -104,6 +115,9 @@ public enum Environment {
             case CHAOS:
                 itemSetup(game);
                 bulletSetup(game);
+                break;
+            case OMEN_NINE:
+                game.revealBullet();
                 break;
 
             default:
@@ -136,6 +150,26 @@ public enum Environment {
                         shooter.addItem(Item.getRandomItem());
                     }
                 }
+                break;
+            case OMEN_SEVEN:
+                if (shooter == target) {
+                    game.enhanceBullet();
+                }
+                break;
+            case OMEN_EIGHT:
+                Player enemy = game.getOpposingPlayer(shooter);
+                ArrayList<Integer> validIdx = new ArrayList<>();
+                for (int i = 0; i < 8; i++) {
+                    if (enemy.getItem(i) != Item.EMPTY) {
+                        validIdx.add(i);
+                    }
+                }
+                if (validIdx.isEmpty()) {
+                    return;
+                }
+                int randomIdx = ThreadLocalRandom.current().nextInt(0, validIdx.size());
+                shooter.addItem(enemy.getItem(randomIdx));
+                enemy.removeItem(randomIdx);
                 break;
             default:
                 break;

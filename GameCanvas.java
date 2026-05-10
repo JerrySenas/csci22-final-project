@@ -15,6 +15,7 @@ public class GameCanvas extends JComponent implements KeyListener {
 
     private ArrayList<Sprite> sprites;
     private Cursor itemCursor;
+    private Cursor enemyCursor;
     private HPBar p1HPBar;
     private HPBar p2HPBar;
     private ScoreBoard scoreboard;
@@ -23,8 +24,6 @@ public class GameCanvas extends JComponent implements KeyListener {
     private TextBox shootSelf, shootThem;
     private ItemSprite[] items;
 
-    private int selectedRow;
-    private int selectedCol;
     private boolean isTurn;
     private boolean isGameOver;
     private Environment currentEnvironment;
@@ -42,8 +41,6 @@ public class GameCanvas extends JComponent implements KeyListener {
             
         });
 
-        selectedRow = 0;
-        selectedCol = 0;
         isTurn = false;
         isGameOver = false;
 
@@ -66,8 +63,12 @@ public class GameCanvas extends JComponent implements KeyListener {
         sprites.add(shootThem);
         sprites.add(shootSelf);
         
-        itemCursor = new Cursor(10, 100);
+        itemCursor = new Cursor(10, 100, Color.RED);
         sprites.add(itemCursor);
+        enemyCursor = new Cursor(10, 100, new Color(255, 180, 180));
+        enemyCursor.row = 0;
+        enemyCursor.col = 3;
+        sprites.add(enemyCursor);
 
         p1HPBar = new HPBar(10, 15, Color.BLACK);
         p2HPBar = new HPBar(700, 15, Color.RED);
@@ -115,8 +116,8 @@ public class GameCanvas extends JComponent implements KeyListener {
     }
 
     public void updateFlavorText() {
-        if (selectedCol == 2) {
-            if (selectedRow == 0) {
+        if (itemCursor.col == 2) {
+            if (itemCursor.row == 0) {
                 flavorBox.setText("Shoot your opponent and end your turn.");
             } else {
                 flavorBox.setText("Shoot yourself. Skips the opponent's turn if the shell was a blank.");
@@ -124,8 +125,8 @@ public class GameCanvas extends JComponent implements KeyListener {
             return;
         }
 
-        int itemIdx = 4*selectedCol + selectedRow;
-        if (selectedCol > 2) {
+        int itemIdx = 4*itemCursor.col + itemCursor.row;
+        if (itemCursor.col > 2) {
             itemIdx -= 4;
         }
 
@@ -176,54 +177,58 @@ public class GameCanvas extends JComponent implements KeyListener {
             }
             switch (e.getKeyCode()) {
                 case KeyEvent.VK_UP:
-                    selectedRow -= 1;
-                    if (selectedCol == 2) {
-                        selectedRow -= 2;
-                        if (selectedRow < 0) {
-                            selectedRow = 3;
+                    itemCursor.row -= 1;
+                    if (itemCursor.col == 2) {
+                        itemCursor.row -= 2;
+                        if (itemCursor.row < 0) {
+                            itemCursor.row = 3;
                         }
-                    } else if (selectedRow < 0) {
-                        selectedRow = MAX_ROWS - 1;
+                    } else if (itemCursor.row < 0) {
+                        itemCursor.row = MAX_ROWS - 1;
                     }
+                    writeToServer.writeUTF(String.format("CURSOR;%d;%d;", itemCursor.row, itemCursor.col));
                     break;
                 case KeyEvent.VK_DOWN:
-                    selectedRow += 1;
-                    if (selectedCol == 2) {
-                        selectedRow += 2;
-                        if (selectedRow > 3) {
-                            selectedRow = 0;
+                    itemCursor.row += 1;
+                    if (itemCursor.col == 2) {
+                        itemCursor.row += 2;
+                        if (itemCursor.row > 3) {
+                            itemCursor.row = 0;
                         }
-                    } else if (selectedRow >= MAX_ROWS) {
-                        selectedRow = 0;
+                    } else if (itemCursor.row >= MAX_ROWS) {
+                        itemCursor.row = 0;
                     }
+                    writeToServer.writeUTF(String.format("CURSOR;%d;%d;", itemCursor.row, itemCursor.col));
                     break;
                 case KeyEvent.VK_LEFT:
-                    if (selectedCol > 0) {
-                        selectedCol -= 1;
-                        if (selectedCol == 2) {
-                            if (selectedRow <= 1) {
-                                selectedRow = 0;
+                    if (itemCursor.col > 0) {
+                        itemCursor.col -= 1;
+                        if (itemCursor.col == 2) {
+                            if (itemCursor.row <= 1) {
+                                itemCursor.row = 0;
                             } else {
-                                selectedRow = 3;
+                                itemCursor.row = 3;
                             }
                         }
                     } else {
-                        selectedCol = 4;
+                        itemCursor.col = 4;
                     }
+                    writeToServer.writeUTF(String.format("CURSOR;%d;%d;", itemCursor.row, itemCursor.col));
                     break;
                 case KeyEvent.VK_RIGHT:
-                    if (selectedCol < MAX_COLS) {
-                        selectedCol += 1;
-                        if (selectedCol == 2) {
-                            if (selectedRow <= 1) {
-                                selectedRow = 0;
+                    if (itemCursor.col < MAX_COLS) {
+                        itemCursor.col += 1;
+                        if (itemCursor.col == 2) {
+                            if (itemCursor.row <= 1) {
+                                itemCursor.row = 0;
                             } else {
-                                selectedRow = 3;
+                                itemCursor.row = 3;
                             }
                         }
                     } else {
-                        selectedCol = 0;
+                        itemCursor.col = 0;
                     }
+                    writeToServer.writeUTF(String.format("CURSOR;%d;%d;", itemCursor.row, itemCursor.col));
                     break;
 
                 case KeyEvent.VK_Z:
@@ -231,16 +236,16 @@ public class GameCanvas extends JComponent implements KeyListener {
                         break;
                     }
                     String cmd;
-                    if (selectedCol == 2) {
+                    if (itemCursor.col == 2) {
                         cmd = "SHOOT;";
-                        if (selectedRow == 0) {
+                        if (itemCursor.row == 0) {
                             cmd += "enemy";
                         } else {
                             cmd += "self";
                         }
-                    } else if (selectedCol < 2) {
+                    } else if (itemCursor.col < 2) {
                         cmd = "ITEM;";
-                        int itemIdx = 4*selectedCol + selectedRow;
+                        int itemIdx = 4*itemCursor.col + itemCursor.row;
                         if (items[itemIdx].getItem() == Item.REVERSE) {
                             rack.isRevealedLive = !rack.isRevealedLive;
                         }
@@ -310,27 +315,33 @@ public class GameCanvas extends JComponent implements KeyListener {
     private class Cursor extends Sprite {
         int w;
         final int h;
+        int row;
+        int col;
+        final Color color;
 
-        public Cursor(double x, double y) {
+        public Cursor(double x, double y, Color c) {
             super(x, y, "");
             w = 100;
             h = 100;
+            row = 0;
+            col = 0;
+            color = c;
         }
 
         @Override
         public void update() {
-            if (selectedCol < 2) {
+            if (col < 2) {
                 w = 100;
-                setTargetX(10 + 115*(selectedCol));
-                setTargetY(140 + 115*(selectedRow));
-            } else if (selectedCol == 2) {
+                setTargetX(10 + 115*(col));
+                setTargetY(140 + 115*(row));
+            } else if (col == 2) {
                 w = 300;
                 setTargetX(364);
-                setTargetY(140 + selectedRow * 115);
+                setTargetY(140 + row * 115);
             } else {
                 w = 100;
-                setTargetX(784 + 115*(selectedCol - 3));
-                setTargetY(140 + 115*(selectedRow));
+                setTargetX(784 + 115*(col - 3));
+                setTargetY(140 + 115*(row));
             }
             super.update();
         }
@@ -338,7 +349,7 @@ public class GameCanvas extends JComponent implements KeyListener {
         @Override
         public void draw(Graphics2D g2d) {
             g2d.setStroke(new BasicStroke(3));
-            g2d.setColor(Color.RED);
+            g2d.setColor(color);
             g2d.draw(new Rectangle2D.Double(getX(), getY(), w, h));
             g2d.setStroke(new BasicStroke(1));
         }
@@ -495,9 +506,18 @@ public class GameCanvas extends JComponent implements KeyListener {
         @Override
         public void run() {
             try {
-                while (true) {
+                while (!isGameOver) {
                     String[] parts = dataIn.readUTF().split(";");
                     switch (parts[0]) {
+                        case "CURSOR":
+                            enemyCursor.row = Integer.parseInt(parts[1]);
+                            int col = Integer.parseInt(parts[2]);
+                            if (col == 2) {
+                                enemyCursor.col = col;
+                            } else {
+                                enemyCursor.col = (col + 3) % 6;
+                            }
+                            break;
                         case "NEW_ROUND":
                             scoreboard.setMyScore(Integer.parseInt(parts[1]));
                             scoreboard.setTheirScore(Integer.parseInt(parts[2]));
@@ -545,10 +565,18 @@ public class GameCanvas extends JComponent implements KeyListener {
                             cleanup();
                             isGameOver = true;
                             break;
+                        case "DISCONNECT":
+                            flavorBox.setText("The other player has disconnected.");
+                            cleanup();
+                            isGameOver = true;
+                            break;
                         default:
                             break;
                     }
                 }
+            } catch (SocketException e) {
+                flavorBox.setText("Disconnected from server. Please exit the game.");
+                isGameOver = true;
             } catch (IOException e) {
                 e.printStackTrace();
             }

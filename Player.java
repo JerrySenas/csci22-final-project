@@ -1,19 +1,18 @@
 
 
 public class Player {
-    private int playerNum;
-
-    private int hp;
     public static final int MAX_HP = 4;
+    private int hp;
+    private int maxRestorableHp;
     private Item[] items;
 
     private boolean isImmune;
     private boolean isSkippingNextTurn;
     
     public Player(int pNum) {
-        playerNum = pNum;
-        
-        hp = MAX_HP;
+        maxRestorableHp = MAX_HP;
+        hp = maxRestorableHp;
+
         items = new Item[8];
         for (int i = 0; i < 8; i++) {
             items[i] = Item.EMPTY;
@@ -27,7 +26,7 @@ public class Player {
     }
 
     public void heal(int amount) {
-        hp = Math.min(MAX_HP, hp + amount);
+        hp = Math.min(maxRestorableHp, hp + amount);
     }
 
     public Item getItem(int itemSlot) {
@@ -55,6 +54,7 @@ public class Player {
     }
 
     public int getHP() { return hp; }
+    public int getMaxRestorableHP() { return maxRestorableHp; }
     public boolean isImmune() { return isImmune; }
     public boolean isSkippingNextTurn() { return isSkippingNextTurn; }
 
@@ -84,4 +84,10 @@ public class Player {
     }
     public void setIsSkippingNextTurn(boolean skip) { isSkippingNextTurn = skip; }
     public void setIsImmune(boolean immune) { isImmune = true; }
+    public void setMaxRestorableHP(int maxHP) {
+        maxRestorableHp = maxHP;
+        if (hp > maxRestorableHp) {
+            hp = maxRestorableHp;
+        }
+    }
 }

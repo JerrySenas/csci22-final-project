@@ -11,6 +11,7 @@ public enum Item {
     GLASS (4, "assets/glass.png", true, "Magnifying Glass", "Check the current round in the chamber."),
     REVERSE (5, "assets/reverse.png", true, "Seija's Calling Card", "Swaps the polarity of the current round in the chamber."),
     CASING (6, "assets/casing.png", true, "The Rest of the Bullet", "If the current bullet is live, it deals 1 more damage."),
+    MEDICINE (7, "assets/medicine.png", true, "Expired SSRIs", "40% chance of dealing 1 to yourself, 40% chance of healing 2, 20% chance  healing 2 and giving yourself immunity."),
     
     DEST_WHITE(90, "assets/white_egg.png", false, "Destruction in White", "Destroy all other items. If at least 2 were destroyed, heal 1 HP and turn this item into a Destruction in Black."),
     DEST_BLACK(91, "assets/black_egg.png", false, "Destruction in Black", "Destroy all other items. If at least 2 were destroyed, deal 1 damage and turn this item into a Destruction in White."),
