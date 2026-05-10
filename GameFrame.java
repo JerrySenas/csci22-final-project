@@ -2,13 +2,13 @@ import java.net.Socket;
 import javax.swing.*;
 
 public class GameFrame {
-    private JFrame frame;
-    private int width;
-    private int height;
+    private final JFrame frame;
+    private final int width;
+    private final int height;
 
     private JPanel cp;
 
-    private GameCanvas gameCanvas;
+    private final GameCanvas gameCanvas;
 
     public GameFrame(Socket serverConnection) {
         frame = new JFrame();

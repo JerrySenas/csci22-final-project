@@ -27,10 +27,25 @@ public class GameStarter {
             }
 
             while (waiting) {
-                System.out.print("Would you like to: [1] host or [2] join a room? ");
+                System.out.println("");
+                System.out.println("[1] Host a room");
+                System.out.println("[2] Join a room");
+                System.out.println("[3] Show rooms");
                 switch (scanner.nextLine()) {
                     case "1":
-                        serverWrite.writeUTF("HOST");
+                        System.out.println("\n[1] Public or [2] Private? ");
+                        String pubOrPrivRes = scanner.nextLine();
+                        if (pubOrPrivRes.equals("1")) {
+                            System.out.print("Room name: ");
+                            String roomName = scanner.nextLine();
+                            serverWrite.writeUTF("HOST;PUBLIC;" + roomName);
+                        } else if (pubOrPrivRes.equals("2")) {
+                            serverWrite.writeUTF("HOST;PRIVATE;;");
+                        } else {
+                            System.out.println("Invalid input");
+                            break;
+                        }
+
                         String[] hostRes = serverRead.readUTF().split(";");
                         System.out.println("Room created with roomID: " + hostRes[2]);
                         int time = 0;
@@ -39,7 +54,7 @@ public class GameStarter {
                             System.out.print("\rWaiting for player 2" + dots[time % 4]);
                             time++;
                         }
-                        System.out.println("Player 2 joined. Starting game...");
+                        System.out.println("\nPlayer 2 joined. Starting game...");
                         waiting = false;
                         break;
                     
@@ -71,6 +86,19 @@ public class GameStarter {
                                 break;
                         }
                         break;
+
+                    case "3":
+                        serverWrite.writeUTF("GET_ROOMS");
+                        System.out.println("=============== PUBLIC ROOMS ===============");
+                        String[] rooms = serverRead.readUTF().split(";");
+                        if (rooms.length < 2) {
+                            System.out.println("");
+                            break;
+                        }
+                        for (int i = 0; i < rooms.length; i += 2) {
+                            System.out.printf("[%s] - %s\n", rooms[i], rooms[i+1]);
+                        }
+                        break;
     
                     default:
                         break;
@@ -82,10 +110,12 @@ public class GameStarter {
 
         } catch (IOException e) {
             e.printStackTrace();
+            scanner.close();
             return;
         }
 
         GameFrame gameFrame = new GameFrame(socket);
         gameFrame.setupGUI();
+        scanner.close();
     }
 }

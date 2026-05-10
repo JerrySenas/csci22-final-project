@@ -23,11 +23,7 @@ public class Player {
     }
 
     public void takeDamage(int dmg) {
-        if (isImmune) {
-            isImmune = false;
-        } else {
-            hp = Math.max(0, hp - dmg);
-        }
+        hp = Math.max(0, hp - dmg);
     }
 
     public void heal(int amount) {
@@ -61,11 +57,29 @@ public class Player {
     public int getHP() { return hp; }
     public boolean isImmune() { return isImmune; }
     public boolean isSkippingNextTurn() { return isSkippingNextTurn; }
+
+    public boolean hasItem(Item item) {
+        boolean hasitem = false;
+        for (Item playerItem : items) {
+            if (playerItem == item) { hasitem = true; }
+            break;
+        }
+        return hasitem;
+    }
     public Item[] getItems() { return items; }
+    public int getNumItems() {
+        int numItems = 0;
+        for (Item item : items) {
+            if (item != Item.EMPTY) { numItems++; }
+        }
+        return numItems;
+    }
 
     public void clearItems() {
         for (int i = 0; i < 8; i++) {
-            items[i] = Item.EMPTY;
+            if (items[i] != Item.DISD_CLAWS) {
+                items[i] = Item.EMPTY;
+            }
         }
     }
     public void setIsSkippingNextTurn(boolean skip) { isSkippingNextTurn = skip; }

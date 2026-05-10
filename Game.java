@@ -6,8 +6,8 @@ import java.util.*;
 public class Game {
     private Player p1;
     private Player p2;
-    private DataOutputStream p1Out;
-    private DataOutputStream p2Out;
+    private final DataOutputStream p1Out;
+    private final DataOutputStream p2Out;
     private int p1Score;
     private int p2Score;
     private int currentTurn;
@@ -22,7 +22,7 @@ public class Game {
     private Boolean dmgModified;
 
     private boolean gameEnded;
-    private ActionListener endgameCallback;
+    private final ActionListener endgameCallback;
 
     public Game(DataOutputStream p1O, DataOutputStream p2O, ActionListener callback) {
         p1Out = p1O;
@@ -42,6 +42,7 @@ public class Game {
         p1Score = 0;
         p2Score = 0;
         envs = new ArrayList<>(Arrays.asList(Environment.values()));
+        currentTurn = Math.random() < 0.5 ? 1 : 2;
         startRound();
     }
 
@@ -51,22 +52,24 @@ public class Game {
         } else if (p2.getHP() == 0) {
             p1Score++;
         }
+        announce(String.format("NEW_ROUND;%d;%d", p1Score, p2Score), String.format("NEW_ROUND;%d;%d", p2Score, p1Score));
 
         if (p1Score >= 3) {
             announce("WIN", "LOSE");
+            return;
         } else if (p2Score >= 3) {
             announce("LOSE", "WIN");
+            return;
         }
 
         int envIdx = (int) (Math.random() * envs.size());
+        envIdx = 8;
         currentEnvironment = envs.get(envIdx);
         envs.remove(envIdx);
         announce("ENV;" + currentEnvironment.getEnvNum());
 
         p1.heal(Player.MAX_HP);
         p2.heal(Player.MAX_HP);
-        announce(String.format("NEW_ROUND;%d;%d", p1Score, p2Score), String.format("NEW_ROUND;%d;%d", p2Score, p1Score));
-        currentTurn = Math.random() < 0.5 ? 1 : 2;
         startSet();
     }
 
@@ -77,6 +80,7 @@ public class Game {
         dmgTaken = 1;
         enhanced = false;
         dmgModified = false;
+        announce("PLUS_DMG;RESET");
         sendGameState();
         changeTurn();
     }
@@ -89,18 +93,21 @@ public class Game {
             currentDmg *= 2;
         }
 
+        Player target;
         if (data[1].equals("self")) {
+            target = getSelfPlayer(playerNum);
             if (currentBullet) {
-                getSelfPlayer(playerNum).takeDamage(currentDmg);
+                dealDamage(currentDmg, target);
                 changeTurn();
             } else if (enhanced) {
-                getSelfPlayer(playerNum).setIsImmune(true);
+                target.setIsImmune(true);
             }
         } else {
+            target = getOpposingPlayer(playerNum);
             if (bullets.get(numBullets - 1)) {
-                getOpposingPlayer(playerNum).takeDamage(currentDmg);
+                dealDamage(currentDmg, target);
             } else if (enhanced) {
-                getOpposingPlayer(playerNum).setIsImmune(true);
+                target.setIsImmune(true);
             }
             changeTurn();
         }
@@ -108,19 +115,16 @@ public class Game {
         if (enhanced) {
             enhanced = false;
         }
-
+        
         if (dmgModified) {
             dmgTaken = 1;
             dmgModified = false;
             announce("PLUS_DMG;RESET");
         }
-
+        
+        currentEnvironment.onShoot(this, currentBullet, getSelfPlayer(playerNum), target);
         decrementBullets();
-
         sendGameState();
-        if (p1.getHP() == 0 || p2.getHP() == 0) {
-            startRound();
-        }
     }
 
     public void handleItem(int playerNum, String[] data) {
@@ -160,22 +164,55 @@ public class Game {
                 break;
 
             case CASING:
+            case DISD_CLAWS:
                 dmgTaken++;
                 dmgModified = true;
                 announce("PLUS_DMG;ADD");
                 break;
 
+            case DEST_WHITE:
+                if (player.getNumItems() > 2) {
+                    player.heal(1);
+                    player.clearItems();
+                    player.addItem(Item.DEST_BLACK);
+                    sendGameState();
+                }
+                return;
+
+            case DEST_BLACK:
+                if (player.getNumItems() > 2) {
+                    dealDamage(1, getOpposingPlayer(playerNum));
+                    player.clearItems();
+                    player.addItem(Item.DEST_WHITE);
+                    sendGameState();
+                }
+                return;
+
             default:
                 return;
         }
         player.removeItem(itemSlot);
-        currentEnvironment.onItemUse(this, item);
+        currentEnvironment.onItemUse(this, item, playerNum);
         sendGameState();
     }
 
     public void enhanceBullet() {
         enhanced = true;
         announce("ENHANCE;");
+    }
+
+    public void dealDamage(int damage, Player target) {
+        if (target.isImmune()) {
+            target.setIsImmune(false);
+            sendGameState();
+            return;
+        }
+        target.takeDamage(damage);
+        currentEnvironment.onDamageTaken(this, target);
+        sendGameState();
+        if (p1.getHP() == 0 || p2.getHP() == 0) {
+            startRound();
+        }
     }
 
     public Player getSelfPlayer(int playerNum) { 
@@ -314,14 +351,15 @@ public class Game {
     }
 
     private class ReadFromClient implements Runnable {
-        private DataInputStream dataIn;
-        private int playerNum;
+        private final DataInputStream dataIn;
+        private final int playerNum;
 
         public ReadFromClient(DataInputStream in, int pNum) {
             dataIn = in;
             playerNum = pNum;
         }
 
+        @Override
         public void run() {
             try {
                 while (true) { 

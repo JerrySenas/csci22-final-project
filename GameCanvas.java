@@ -1,7 +1,6 @@
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.geom.Ellipse2D;
-import java.awt.geom.Rectangle2D;
+import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.*;
@@ -9,6 +8,10 @@ import java.util.ArrayList;
 import javax.swing.*;
 
 public class GameCanvas extends JComponent implements KeyListener {
+
+    private static final int MAX_ITEMS = 8;
+    private static final int MAX_ROWS = MAX_ITEMS / 2;
+    private static final int MAX_COLS = 2 * MAX_ITEMS / MAX_ROWS;
 
     private ArrayList<Sprite> sprites;
     private Cursor itemCursor;
@@ -22,9 +25,6 @@ public class GameCanvas extends JComponent implements KeyListener {
 
     private int selectedRow;
     private int selectedCol;
-    private static final int MAX_ITEMS = 8;
-    private static final int MAX_ROWS = MAX_ITEMS / 2;
-    private static final int MAX_COLS = 2 * MAX_ITEMS / MAX_ROWS;
     private boolean isTurn;
     private boolean isGameOver;
     private Environment currentEnvironment;
@@ -112,11 +112,6 @@ public class GameCanvas extends JComponent implements KeyListener {
 
         rack.setLives(Integer.parseInt(gameState[23]));
         rack.setBlanks(Integer.parseInt(gameState[24]));
-
-        // if (turnChanged) {
-        //     lockout(1000);
-        //     turnChanged = false;
-        // }
     }
 
     public void updateFlavorText() {
@@ -155,11 +150,9 @@ public class GameCanvas extends JComponent implements KeyListener {
         }
     }
 
-    public void lockout(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (Exception e) {
-            e.printStackTrace();
+    public void cleanup() {
+        for (ItemSprite itemSprite : items) {
+            itemSprite.item = Item.EMPTY;
         }
     }
 
@@ -252,7 +245,6 @@ public class GameCanvas extends JComponent implements KeyListener {
                             rack.isRevealedLive = !rack.isRevealedLive;
                         }
                         cmd += itemIdx;
-                        System.out.println(cmd);
                     } else {
                         break;
                     }
@@ -262,7 +254,7 @@ public class GameCanvas extends JComponent implements KeyListener {
                 default:
                     break;
             }
-        } catch (Exception ex) {
+        } catch (IOException ex) {
             ex.printStackTrace();
         }
         updateFlavorText();
@@ -275,23 +267,17 @@ public class GameCanvas extends JComponent implements KeyListener {
     public void keyTyped(KeyEvent e) {}
 
     private class ItemSprite extends Sprite {
-        private int itemNum;
-        private Item item;
-        private final Rectangle2D.Double outline;
+        Item item;
+        final Rectangle2D.Double outline;
 
         public ItemSprite(int r, int c, Item item) {
             super(getXFromCol(c), getYFromRow(r), item.getSpritePath());
             this.item = item;
-            itemNum = item.getItemNum();
             outline = new Rectangle2D.Double(getX(), getY(), 100, 100);
         }
 
         public ItemSprite(int r, int c, int itemNum) {
             this(r, c, Item.getItem(itemNum));
-        }
-
-        public ItemSprite(int itemIdx, int itemNum) {
-            this(getRowColumnFromItemIdx(itemIdx)[0], getRowColumnFromItemIdx(itemIdx)[1], Item.getItem(itemNum));
         }
 
         public static double getXFromCol(int col) {
@@ -306,21 +292,8 @@ public class GameCanvas extends JComponent implements KeyListener {
             return 140 + 115*row;
         }
 
-        public static int[] getRowColumnFromItemIdx(int itemIdx) {
-            itemIdx %= 16;
-            int[] rowCol = new int[2];
-            rowCol[0] = itemIdx % 4;
-            rowCol[1] = itemIdx / 4;
-            if (rowCol[1] >= 2) {
-                rowCol[1] += 1;
-            }
-
-            return rowCol;
-        }
-
         public void changeItem(int itemNum) {
             item = Item.getItem(itemNum);
-            this.itemNum = itemNum;
             setImage(item.getSpritePath());
         }
 
@@ -335,8 +308,8 @@ public class GameCanvas extends JComponent implements KeyListener {
     }
 
     private class Cursor extends Sprite {
-        private int w;
-        private int h;
+        int w;
+        final int h;
 
         public Cursor(double x, double y) {
             super(x, y, "");
@@ -372,14 +345,14 @@ public class GameCanvas extends JComponent implements KeyListener {
     }
 
     private class HPBar extends Sprite {
-        private int hp;
-        private Color color;
-        private boolean isTurn;
-        private boolean isSkipping;
-        private boolean isImmune;
+        int hp;
+        final Color color;
+        boolean isTurn;
+        boolean isSkipping;
+        boolean isImmune;
 
-        private final BufferedImage lockedStatusImg;
-        private final BufferedImage immuneStatusImg;
+        final BufferedImage lockedStatusImg;
+        final BufferedImage immuneStatusImg;
 
         public HPBar(double x, double y, Color c) {
             super(x, y, "");
@@ -428,7 +401,7 @@ public class GameCanvas extends JComponent implements KeyListener {
     }
 
     private class ScoreBoard extends Sprite {
-        private int myScore, theirScore;
+        int myScore, theirScore;
 
         public ScoreBoard(double x, double y) {
             super(x, y, "");
@@ -449,14 +422,14 @@ public class GameCanvas extends JComponent implements KeyListener {
     }
 
     private class Rack extends Sprite {
-        private int lives;
-        private int blanks;
-        private int dmgModifier;
-        private boolean revealed;
-        private boolean enhanced;
-        private boolean isRevealedLive;
-        private final Rectangle2D.Double outline;
-        private final BufferedImage plusMarks;
+        int lives;
+        int blanks;
+        int dmgModifier;
+        boolean revealed;
+        boolean enhanced;
+        boolean isRevealedLive;
+        final Rectangle2D.Double outline;
+        final BufferedImage plusMarks;
         
         public Rack(double x, double y, int lives, int blanks) {
             super(x, y, "");
@@ -513,7 +486,7 @@ public class GameCanvas extends JComponent implements KeyListener {
     }
 
     private class ReadFromServer implements Runnable {
-        private DataInputStream dataIn;
+        final DataInputStream dataIn;
         
         public ReadFromServer(DataInputStream in) {
             dataIn = in;
@@ -564,17 +537,19 @@ public class GameCanvas extends JComponent implements KeyListener {
                             break;
                         case "WIN":
                             flavorBox.setText("You have bested your opponent.");
+                            cleanup();
                             isGameOver = true;
                             break;
                         case "LOSE":
                             flavorBox.setText("You have lost your life.");
+                            cleanup();
                             isGameOver = true;
                             break;
                         default:
                             break;
                     }
                 }
-            } catch (Exception e) {
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }

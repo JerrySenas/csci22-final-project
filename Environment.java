@@ -1,26 +1,35 @@
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.concurrent.ThreadLocalRandom;
 
 public enum Environment {
     NORMAL(0, "Normal", "No funny business."),
-    ITEM_CARRYOVER(1, "Hoarder", "Items don't disappear when the rack is reset."),
-    WHISPER(2, "Whisper", "Every fourth shot is enhanced to either deal double damage or give immunity."),
+    HOARDER(1, "Hoarder", "Items don't disappear when the rack is reset."),
+    CHAOS(2, "Whims of Chaos", "Only by casting aside reason can one truly gamble."),
     RUSSIAN(3, "Russian Roulette", "Down for a good old game of Russian Roulette?"),
-    CHAOS(4, "Whims of Chaos", "Only by casting aside reason can one truly gamble.");
+    WHISPER(4, "Whisper", "Every fourth shot is enhanced to either deal double damage or give immunity."),
+    OMEN_ONE(11, "Omen: One", "One."),
+    OMEN_TWO(12, "Omen: Idolatry", "Offer your items to your idol. Items don't disappear when the rack is reset."),
+    OMEN_THREE(13, "Omen: Silence", "Every third item use deals 3 damage to yourself."),
+    OMEN_FOUR(14, "Omen: Repose", "Shooting a blank to your opponent gives you 4 random items."),
+    OMEN_FIVE(15, "Omen: Disdain", "Taking damage gives you a 'Claws of Ardent Disdain'."),
+    ;
 
     private final int envNum;
     private final String name;
     private final String description;
+    private int counter;
 
     private Environment(int num, String name, String desc) {
         envNum = num;
         this.name = name;
         description = desc;
+        counter = 0;
     }
 
     public void bulletSetup(Game game) {
-        int numBullets = (int) ((Math.random() * 7) + 2);
+        int numBullets = ThreadLocalRandom.current().nextInt(2, 9);
         ArrayList<Boolean> bullets = new ArrayList<>();
 
         switch (this) {
@@ -50,24 +59,35 @@ public enum Environment {
     }
 
     public void itemSetup(Game game) {
-        if (this != ITEM_CARRYOVER) {
+        if (this != HOARDER && this != OMEN_TWO) {
             game.getSelfPlayer(1).clearItems();
             game.getSelfPlayer(2).clearItems();
         }
-        int numItems;
+        int numItems = 0;
+        int i = 0;
         switch (this) {
             case RUSSIAN:
-                numItems = 0;
                 break;
             case WHISPER:
                 numItems = Math.random() < 0.5 ? 4 : 8;
                 break;
+            case OMEN_ONE:
+                numItems = 1;
+                break;
+            case OMEN_TWO:
+                if (numItems == 0) {
+                    game.getSelfPlayer(1).addItem(Item.DEST_WHITE);
+                    game.getSelfPlayer(2).addItem(Item.DEST_WHITE);
+                    i++;
+                }
+                numItems = ThreadLocalRandom.current().nextInt(2, 9);
+                break;
             default:
-                numItems = (int) (Math.random() * 9);
+                numItems = ThreadLocalRandom.current().nextInt(0, 9);
                 break;
         }
     
-        for (int i = 0; i < numItems; i++) {
+        for (int j = i; j < numItems; j++) {
             Item item = Item.getRandomItem();
             game.getSelfPlayer(1).addItem(item);
             game.getSelfPlayer(2).addItem(item);
@@ -91,11 +111,41 @@ public enum Environment {
         }
     }
 
-    public void onItemUse(Game game, Item item) {
+    public void onItemUse(Game game, Item item, int playerNum) {
         switch (this) {
             case CHAOS:
                 itemSetup(game);
                 bulletSetup(game);
+                break;
+            case OMEN_THREE:
+                counter++;
+                if (counter % 3 == 0) {
+                    game.getSelfPlayer(playerNum).takeDamage(3);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    public void onShoot(Game game, boolean bullet, Player shooter, Player target) {
+        switch (this) {
+            case OMEN_FOUR:
+                if (!bullet && shooter != target) {
+                    for (int i = 0; i < 4; i++) {
+                        shooter.addItem(Item.getRandomItem());
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    public void onDamageTaken(Game game, Player target) {
+        switch (this) {
+            case OMEN_FIVE:
+                target.addItem(Item.DISD_CLAWS);
                 break;
             default:
                 break;

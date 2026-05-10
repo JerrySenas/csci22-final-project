@@ -6,6 +6,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class GameServer {
     private ServerSocket ss;
+    private static final int PORT = 7777;
     private ArrayList<Integer> roomIDs;
     private ArrayList<Room> rooms;
 
@@ -14,32 +15,43 @@ public class GameServer {
             roomIDs = new ArrayList<>();
             rooms = new ArrayList<>();
             roomIDs.add(0);
-            ss = new ServerSocket(7777);
+            ss = new ServerSocket(GameServer.PORT);
         } catch (IOException e) {
         }
     }
     
     public void acceptConnections() {
         try {
+            // Print ip address
+            Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
+            for (NetworkInterface netint : Collections.list(nets)) {
+                displayInterfaceInformation(netint);
+            }
+            System.out.println("Port: " + GameServer.PORT);
+            System.out.println("Server ready.");
+
             while (true) {
-                // System.out.println("Awaiting players...");
-                // while (numPlayers < REQUIRED_PLAYERS) {
-                //     numPlayers++;
-                    
-                //     Socket socket = ss.accept();
-                //     DataInputStream in = new DataInputStream(socket.getInputStream());
-                //     if (numPlayers == 1) {
-                //         p1Out = new DataOutputStream(socket.getOutputStream());
-                //     } else {
-                //         p2Out = new DataOutputStream(socket.getOutputStream());
-                //     }
-                // }
                 Socket socket = ss.accept();
                 new Thread(new ClientHandler(socket)).start();
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
+
+    // https://docs.oracle.com/javase/tutorial/networking/nifs/listing.html
+    public void displayInterfaceInformation(NetworkInterface netint) throws SocketException {
+        if (!netint.getInetAddresses().hasMoreElements() || !netint.isUp()) {
+            return;
+        }
+        System.out.printf("Display name: %s\n", netint.getDisplayName());
+        System.out.printf("Name: %s\n", netint.getName());
+        Enumeration<InetAddress> inetAddresses = netint.getInetAddresses();
+        for (InetAddress inetAddress : Collections.list(inetAddresses)) {
+            System.out.printf("InetAddress: %s\n", inetAddress);
+        }
+        System.out.printf("\n");
+     }
 
     private Room findRoom(int roomID) {
         for (Room room : rooms) {
@@ -64,12 +76,16 @@ public class GameServer {
     private class Room {
         private int numPlayers;
         private int roomID;
-        private DataInputStream p1In;
+        private String name;
+        private final boolean isPublic;
+        private final DataInputStream p1In;
         private DataInputStream p2In;
-        private DataOutputStream p1Out;
+        private final DataOutputStream p1Out;
         private DataOutputStream p2Out;
 
-        public Room(DataInputStream in, DataOutputStream out) {
+        public Room(DataInputStream in, DataOutputStream out, boolean pubOrPriv) {
+            name = "";
+            isPublic = pubOrPriv;
             int id = 0;
             while (roomIDs.contains(id)) {
                 id = ThreadLocalRandom.current().nextInt(10000, 100000);
@@ -82,6 +98,8 @@ public class GameServer {
             numPlayers = 1;
             System.out.printf("[%d] Room created.\n", roomID);
         }
+
+        public void setName(String n) { name = n; }
 
         public boolean p2Join(DataInputStream in, DataOutputStream out) {
             if (p2In == null) {
@@ -97,6 +115,7 @@ public class GameServer {
 
         public void startGame() {
             Room roomRef = this;
+            // Yes i am too lazy to create a dedicated listener interface shut up
             Game game = new Game(p1Out, p2Out, new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent ae) {
@@ -137,7 +156,10 @@ public class GameServer {
                     
                     switch (cmd[0]) {
                         case "HOST":
-                            currentRoom = new Room(socketIn, socketOut);
+                            currentRoom = new Room(socketIn, socketOut, cmd[1].equals("PUBLIC"));
+                            if (cmd.length > 2) {
+                                currentRoom.setName(cmd[2]);
+                            }
                             rooms.add(currentRoom);
                             socketOut.writeUTF("ROOM;CREATED;" + currentRoom.roomID);
 
@@ -180,6 +202,18 @@ public class GameServer {
                             }
                             socketOut.writeUTF("CONNECT;SUCCESS");
                             running = false;
+                            break;
+
+                        case "GET_ROOMS":
+                            String roomRes = "";
+                            for (Room r : rooms) {
+                                if (r.isPublic) {
+                                    roomRes += r.roomID;
+                                    roomRes += ";";
+                                    roomRes += r.name + ";";
+                                }
+                            }
+                            socketOut.writeUTF(roomRes);
                             break;
         
                         default:
