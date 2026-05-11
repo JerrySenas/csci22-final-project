@@ -76,6 +76,7 @@ public class Game {
         p2Score = 0;
         envs = new ArrayList<>(Arrays.asList(Environment.values()));
         currentTurn = Math.random() < 0.5 ? 1 : 2;
+        changeTurn();
         startRound();
     }
 
@@ -105,9 +106,11 @@ public class Game {
 
         p1.setMaxRestorableHP(Player.MAX_HP);
         p2.setMaxRestorableHP(Player.MAX_HP);
-
         p1.heal(Player.MAX_HP);
         p2.heal(Player.MAX_HP);
+
+        p1.clearItems();
+        p2.clearItems();
         startSet();
     }
 
@@ -423,7 +426,6 @@ public class Game {
 
 
         announce("TURN;" + isP1Turn, "TURN;" + isP2Turn);
-        sendGameState();
 
         if (getSelfPlayer(currentTurn).isSkippingNextTurn()) {
             getSelfPlayer(currentTurn).setIsSkippingNextTurn(false);

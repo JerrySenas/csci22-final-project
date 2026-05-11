@@ -141,7 +141,8 @@ public enum Environment {
                 numItems = 1;
                 break;
             case OMEN_TWO:
-                if (numItems == 0) {
+                // Players shouldn't be able to destroy their eggs so this only adds on round start... hopefully
+                if (game.getSelfPlayer(1).getNumItems() == 0) {
                     game.getSelfPlayer(1).addItem(Item.DEST_WHITE);
                     game.getSelfPlayer(2).addItem(Item.DEST_WHITE);
                     i++;
