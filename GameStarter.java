@@ -21,6 +21,12 @@ import java.net.*;
 import java.util.Scanner;
 
 public class GameStarter {
+    /**
+     * The game client's entry point. Connects to the server, which creates a socket that will be passed to the GameCanvas.
+     * 
+     * Allows the user to host a room, join a room, or show all public rooms. When a room is ready, the GameFrame will be created.
+     * @param args
+     */
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
         System.out.print("Enter server IP address: ");

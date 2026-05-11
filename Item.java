@@ -42,6 +42,16 @@ public enum Item {
     private final String description;
     private final String flavor;
 
+    /**
+     * Class constructor.
+     * 
+     * @param itemNum unique numerical identifier
+     * @param path filepath for this item's image
+     * @param randAccess whether this item can be selected by getRandomItem
+     * @param name this item's name
+     * @param desc this item's description
+     * @param flav this item's flavor text
+     */
     private Item(int itemNum, String path, boolean randAccess, String name, String desc, String flav) {
         this.itemNum = itemNum;
         spritePath = path;
@@ -51,6 +61,12 @@ public enum Item {
         flavor = flav;
     }
 
+    /**
+     * Retrieves the item given its unique numerical identifier.
+     * 
+     * @param itemNum the unique identifier
+     * @return the matching Item
+     */
     public static Item getItem(int itemNum) {
         for (Item item : Item.values()) {
             if (item.itemNum == itemNum) {
@@ -60,6 +76,11 @@ public enum Item {
         System.out.printf("Item with itemNumber: %d doesn't exist\n", itemNum);
         return null;
     }
+
+    /**
+     * Retrieves an item randomly. Items with a randomAccessible value of false will not be included.
+     * @return a randomly selected Item
+     */
     public static Item getRandomItem() {
         ArrayList<Item> validItems = new ArrayList<>();
         for (Item item : Item.values()) {
@@ -67,9 +88,34 @@ public enum Item {
         }
         return getItem(ThreadLocalRandom.current().nextInt(validItems.size()));
     }
+
+    /**
+     * Retrieves the unique numerical identifier of this Item
+     * @return the unique identifier
+     */
     public int getItemNum() { return itemNum; }
+
+    /**
+     * Returns the filepath of this item's sprite
+     * @return filepath
+     */
     public String getSpritePath() { return spritePath; }
+
+    /**
+     * Returns this Item's name
+     * @return name
+     */
     public String getName() { return name; }
+
+    /**
+     * Returns this Item's description
+     * @return description
+     */
     public String getDescription() { return description; }
+
+    /**
+     * Returns this Item's flavor text
+     * @return flavor text
+     */
     public String getFlavor() { return flavor; }
 }

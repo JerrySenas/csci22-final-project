@@ -43,6 +43,12 @@ public class Game {
     private boolean gameEnded;
     private final ActionListener endgameCallback;
 
+    /**
+     * Class constructor.
+     * @param p1O Player 1's DataOutputStream
+     * @param p2O Player 2's DataOutputStream
+     * @param callback callback to be run at the end of the game
+     */
     public Game(DataOutputStream p1O, DataOutputStream p2O, ActionListener callback) {
         p1Out = p1O;
         p2Out = p2O;
@@ -50,11 +56,19 @@ public class Game {
         endgameCallback = callback;
     }
 
+    /**
+     * Starts a thread that reads the commands of each of the Players.
+     * @param p1In Player 1's DataInputStream
+     * @param p2In Player 2's DataInputStream
+     */
     public void startThreads(DataInputStream p1In, DataInputStream p2In) {
         new Thread(new ReadFromClient(p1In, 1)).start();
         new Thread(new ReadFromClient(p2In, 2)).start();
     }
 
+    /**
+     * Sets up a new game and starts a round.
+     */
     public void startGame() {
         p1 = new Player(1);
         p2 = new Player(2);
@@ -65,6 +79,9 @@ public class Game {
         startRound();
     }
 
+    /**
+     * Sets up a new round. If either Player's HP is 0, a point is added to the other Player's score.
+     */
     public void startRound() {
         if (p1.getHP() == 0) {
             p2Score++;
@@ -94,6 +111,9 @@ public class Game {
         startSet();
     }
 
+    /**
+     * Sets up a new set. Triggers the currentEnvironment's shellSetup and itemSetup.
+     */
     public void startSet() {
         currentEnvironment.shellSetup(this);
         currentEnvironment.itemSetup(this);
@@ -103,9 +123,13 @@ public class Game {
         dmgModified = false;
         announce("PLUS_DMG;RESET");
         sendGameState();
-        changeTurn();
     }
 
+    /**
+     * Handles a shoot command. Triggers the currentEnvironment's onShoot after onBulletChange (from decrementBullet).
+     * @param playerNum playerNum of the shooter
+     * @param data the data of the command
+     */
     public void handleShoot(int playerNum, String[] data) {
         int currentDmg = dmgTaken;
         boolean currentShell = shells.get(numShells - 1);
@@ -149,6 +173,13 @@ public class Game {
         }
     }
 
+    /**
+     * Handles the use item command. Triggers the currentEnvironment's onItemUse.
+     * 
+     * Each item's functionality is defined here.
+     * @param playerNum playerNum of the item user
+     * @param data the use item command
+     */
     public void handleItem(int playerNum, String[] data) {
         Player player = getSelfPlayer(playerNum);
         int itemSlot = Integer.parseInt(data[1]);
@@ -229,24 +260,35 @@ public class Game {
                 return;
         }
         player.removeItem(itemSlot);
-        currentEnvironment.onItemUse(this, item, playerNum);
+        currentEnvironment.onItemUse(this, item, player);
         sendGameState();
         if (numShells <= 0) {
             startSet();
         }
     }
 
+    /**
+     * Enhances the current shell.
+     */
     public void enhanceShell() {
         enhanced = true;
         announce("ENHANCE;");
     }
 
+    /**
+     * Reveals the current shell.
+     */
     public void revealShell() {
         if (numShells > 0) {
             announce("REVEAL;" + (shells.get(numShells - 1) ? 1 : 0));
         }
     }
 
+    /**
+     * Causes the target Player to take damage. Triggers the currentEnvironment's onDamageTaken.
+     * @param damage amount of damage taken
+     * @param target Player to take damage
+     */
     public void dealDamage(int damage, Player target) {
         if (currentEnvironment == Environment.OMEN_SIX) {
             target.setMaxRestorableHP(target.getMaxRestorableHP() - 1);
@@ -269,6 +311,11 @@ public class Game {
         }
     }
 
+    /**
+     * Gets the Player associated to the playerNum
+     * @param playerNum the player number
+     * @return the Player
+     */
     public Player getSelfPlayer(int playerNum) { 
         if (playerNum == 1) {
             return p1;
@@ -277,6 +324,11 @@ public class Game {
         }
     }
 
+    /**
+     * Gets the Opponent of the Player associated to the playerNum
+     * @param playerNum the player number
+     * @return the Opponent
+     */
     public Player getOpposingPlayer(int playerNum) {
         if (playerNum == 1) {
             return p2;
@@ -285,6 +337,11 @@ public class Game {
         }
     }
 
+    /**
+     * Gets the Opponent of the Player
+     * @param self the Player
+     * @return their Opponent
+     */
     public Player getOpposingPlayer(Player self) {
         if (p1 == self) {
             return p2;
@@ -293,8 +350,16 @@ public class Game {
         }
     }
 
+    /**
+     * Returns the number of shells are currently in the magazine.
+     * @return number of shells
+     */
     public int getNumShells() { return numShells; }
 
+    /**
+     * Returns the number of live shells are currently in the magazine.
+     * @return number of lives
+     */
     public int getLives() {
         int lives = 0;
         for (boolean shell : shells) {
@@ -305,6 +370,11 @@ public class Game {
 
         return lives;
     }
+
+    /**
+     * Returns the number of blanks are currently in the magazine.
+     * @return number of blanks
+     */
     public int getBlanks() {
         int blanks = 0;
         for (boolean shell : shells) {
@@ -316,11 +386,18 @@ public class Game {
         return blanks;
     }
 
+    /**
+     * Sets the magazine
+     * @param shots ArrayList of booleans representing the shells
+     */
     public void setShells(ArrayList<Boolean> shots) {
         shells = shots;
         numShells = shells.size();
     }
 
+    /**
+     * Chambers the next shell. Triggers the currentEnvironment's onShellChange
+     */
     public void decrementShells() {
         shells.remove(numShells - 1);
         numShells--;
@@ -331,6 +408,9 @@ public class Game {
         currentEnvironment.onShellChange(this);
     }
 
+    /**
+     * Changes the turn. If the Player is skipping their turn, changes it again.
+     */
     public void changeTurn() {
         if (currentTurn == 1) {
             currentTurn = 2;
@@ -351,6 +431,10 @@ public class Game {
         }
     }
 
+    /**
+     * Sends a message to both game clients
+     * @param msg the message
+     */
     public void announce(String msg) {
         try {
             p1Out.writeUTF(msg);
@@ -360,6 +444,11 @@ public class Game {
         }
     }
     
+    /**
+     * Sends a message to each of the game clients
+     * @param msg1 message for Player 1
+     * @param msg2 message for Player 2
+     */
     public void announce(String msg1, String msg2) {
         try {
             p1Out.writeUTF(msg1);
@@ -369,10 +458,15 @@ public class Game {
         }
     }
 
+    /**
+     * Sends a serialized game state to each Player.
+     * 
+     * The serialized game state is in the form HP;enemyHP;isSkipping;isEnemySkipping;isImmune;isEnemyImmune;Items(8);EnemyItems(8);Lives;Blanks
+     */
     public void sendGameState() {
         String serializedStateForP1 = "STATE;";
         String serializedStateForP2 = "STATE;";
-        // HP;enemyHP;isSkipping;isEnemySkipping;isImmune;isEnemyImmune;Items(8);EnemyItems(8);Lives;Blanks
+
         serializedStateForP1 += String.format(
             "%d;%d;%d;%d;%d;%d;",
             p1.getHP(),
@@ -412,15 +506,26 @@ public class Game {
         announce(serializedStateForP1, serializedStateForP2);
     }
 
+    /**
+    This class constantly reads from the game client for commands and executes them. Handles 3 commands, relaying cursor movement, handling shoot actions, and handling item use.
+    */
     private class ReadFromClient implements Runnable {
         private final DataInputStream dataIn;
         private final int playerNum;
 
+        /**
+         * Class constructor.
+         * @param in DataInputStream from the game client
+         * @param pNum assigned player number
+         */
         public ReadFromClient(DataInputStream in, int pNum) {
             dataIn = in;
             playerNum = pNum;
         }
 
+        /**
+         * Handles the player's commands continuously while gameEnded is false.
+         */
         @Override
         public void run() {
             try {

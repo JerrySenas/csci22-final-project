@@ -23,6 +23,16 @@ public class TextBox extends Sprite {
     private String text, flavor;
     private final int width, height;
     private final Rectangle2D.Double outline;
+
+    /**
+     * Class constructor. Flavor text is set as an empty string.
+     * 
+     * @param x X-coordinate of the sprite
+     * @param y Y-coordinate of the sprite
+     * @param w Width
+     * @param h Height
+     * @param txt Text of the textbox
+     */
     public TextBox(double x, double y, int w, int h, String txt) {
         super(x, y, "");
         text = txt;
@@ -32,23 +42,49 @@ public class TextBox extends Sprite {
         outline = new Rectangle2D.Double(x, y, width, height);
     }
 
+    /**
+     * Sets the text of this TextBox.
+     * 
+     * Flavor text will be set to an empty string.
+     * 
+     * @param txt The text to be set to
+     */
     public void setText(String txt) {
         text = txt;
         flavor = "";
     }
 
+    /**
+     * Sets and formats the item's name, description, and flavor text for this TextBox.
+     * 
+     * @param item The selected item
+     */
     public void setItemText(Item item) {
         text = item.getName() + "\n";
         text += " - " + item.getDescription() + "\n\n";
         flavor = item.getFlavor();
     }
 
+    /**
+     * Sets and formats the environment's name, description, and flavor text for this TextBox.
+     * 
+     * @param env The selected environment
+     */
     public void setEnvText(Environment env) {
         text = "Current environment: " + env.getName() + "\n";
         text += " - " + env.getDescription() + "\n\n";
         flavor = env.getFlavor();
     }
 
+    /**
+     * Renders the text of this TextBox in Arial 18 and the flavor text in Arial 14 and in italics.
+     * 
+     * The text is centered horizontally and vertically within this TextBox.
+     * 
+     * Overrides the draw method of the Sprite class.
+     * 
+     * @param g2d The Graphics2D object passed by GameCanvas.paintComponent
+     */
     @Override
     public void draw(Graphics2D g2d) {
         g2d.setColor(Color.BLACK);

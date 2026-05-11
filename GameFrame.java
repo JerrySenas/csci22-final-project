@@ -28,6 +28,10 @@ public class GameFrame {
 
     private final GameCanvas gameCanvas;
 
+    /**
+     * Class constructor. Passes the server connection to the GameCanvas.
+     * @param serverConnection the socket to be passed to GameCanvas
+     */
     public GameFrame(Socket serverConnection) {
         frame = new JFrame();
         width = 1024;
@@ -35,6 +39,9 @@ public class GameFrame {
         gameCanvas = new GameCanvas(serverConnection);
     }
 
+    /**
+     * Sets up the game UI.
+     */
     public void setupGUI() {
         cp = (JPanel) frame.getContentPane();
         cp.setFocusable(true);

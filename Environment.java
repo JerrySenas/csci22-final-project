@@ -45,6 +45,13 @@ public enum Environment {
     private final String flavor;
     private int counter;
 
+    /**
+    Class constructor.
+    @param num Unique identifier
+    @param name Name of the environment
+    @param desc Description of the environment
+    @param flav Flavor text of the environment
+    */
     private Environment(int num, String name, String desc, String flav) {
         envNum = num;
         this.name = name;
@@ -53,6 +60,29 @@ public enum Environment {
         counter = 0;
     }
 
+    /**
+     * Retrieves the environment by its numerical identifier.
+     * 
+     * @param num The environment's unique identifier.
+     */
+    public static Environment getEnvironment(int num) {
+        for (Environment env : Environment.values()) {
+            if (env.envNum == num) {
+                return env;
+            }
+        }
+        System.out.printf("Environment with envNumber: %d doesn't exist\n", num);
+        return null;
+    }
+
+    /**
+     * Generates shells for the magazine at the start of each set.
+     * 
+     * By default, it generates anywhere between 2 to 8 shells, with at least one live and one blank.
+     * 
+     * Some environments overwrite this default functionality.
+     * @param game Reference to the current game instance.
+     */
     public void shellSetup(Game game) {
         int numShells = ThreadLocalRandom.current().nextInt(2, 9);
         ArrayList<Boolean> shells = new ArrayList<>();
@@ -86,6 +116,14 @@ public enum Environment {
         }
     }
 
+    /**
+     * Generates the items for both players at the start of each set.
+     * 
+     * By default, it generates anywhere between 0 to 8 items and sets both players' inventories to those items.
+     * 
+     * Some environments overwrite this default functionality.
+     * @param game Reference to the current game instance.
+     */
     public void itemSetup(Game game) {
         if (this != HOARDER && this != OMEN_TWO) {
             game.getSelfPlayer(1).clearItems();
@@ -125,6 +163,11 @@ public enum Environment {
         }
     }
 
+    /**
+     * Executes functionality that trigger whenever the number of shells in the magazine changes.
+     * 
+     * @param game Reference to the current game instance.
+     */
     public void onShellChange(Game game) {
         switch (this) {
             case WHISPER:
@@ -145,7 +188,14 @@ public enum Environment {
         }
     }
 
-    public void onItemUse(Game game, Item item, int playerNum) {
+    /**
+     * Executes functionality that trigger whenever an item is used.
+     * 
+     * @param game Reference to the current game instance.
+     * @param item The item used.
+     * @param player The player who used the item.
+     */
+    public void onItemUse(Game game, Item item, Player player) {
         switch (this) {
             case CHAOS:
                 itemSetup(game);
@@ -154,7 +204,7 @@ public enum Environment {
             case OMEN_THREE:
                 counter++;
                 if (counter % 3 == 0) {
-                    game.getSelfPlayer(playerNum).takeDamage(3);
+                    player.takeDamage(3);
                 }
                 break;
             default:
@@ -162,6 +212,14 @@ public enum Environment {
         }
     }
 
+    /**
+     * Executes functionality that trigger whenever a player shoots anyone.
+     * 
+     * @param game Reference to the current game instance.
+     * @param shell Whether the shell was live or a blank.
+     * @param shooter The shooter.
+     * @param target The target.
+     */
     public void onShoot(Game game, boolean shell, Player shooter, Player target) {
         switch (this) {
             case OMEN_FOUR:
@@ -196,6 +254,12 @@ public enum Environment {
         }
     }
 
+    /**
+     * Executes functionality that trigger whenever a player takes damage.
+     * 
+     * @param game Reference to the current game instance.
+     * @param target The player who took damage.
+     */
     public void onDamageTaken(Game game, Player target) {
         switch (this) {
             case OMEN_FIVE:
@@ -206,17 +270,23 @@ public enum Environment {
         }
     }
 
-    public static Environment getEnvironment(int num) {
-        for (Environment env : Environment.values()) {
-            if (env.envNum == num) {
-                return env;
-            }
-        }
-        System.out.printf("Environment with envNumber: %d doesn't exist\n", num);
-        return null;
-    }
+    /**
+     * Returns this environment's environment number.
+     */
     public int getEnvNum() { return envNum; }
+
+    /**
+     * Returns this environment's name.
+     */
     public String getName() { return name; }
+
+    /**
+     * Returns this environment's description.
+     */
     public String getDescription() { return description; }
+
+    /**
+     * Returns this environment's flavor text.
+     */
     public String getFlavor() { return flavor; }
 }

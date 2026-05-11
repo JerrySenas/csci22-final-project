@@ -28,6 +28,9 @@ public class GameServer {
     private ArrayList<Integer> roomIDs;
     private ArrayList<Room> rooms;
 
+    /**
+     * Class constructor.
+     */
     public GameServer() {
         try {
             roomIDs = new ArrayList<>();
@@ -37,7 +40,21 @@ public class GameServer {
         } catch (IOException e) {
         }
     }
+
+    /**
+     * The entry point of a GameServer.
+     * @param args
+     */
+    public static void main(String[] args) {
+        GameServer gameServer = new GameServer();
+        gameServer.acceptConnections();
+    }
     
+    /**
+     * Prints the IP address of the machine running this GameServer and continuously accepts connections from game clients.
+     * 
+     * Creates a Thread with a ClientHandler each time a player connects to the server
+     */
     public void acceptConnections() {
         try {
             // Print ip address
@@ -57,7 +74,13 @@ public class GameServer {
         }
     }
 
-    // https://docs.oracle.com/javase/tutorial/networking/nifs/listing.html
+    /**
+     * Displays information about the machine's network interface.
+     * 
+     * Copied from: https://docs.oracle.com/javase/tutorial/networking/nifs/listing.html
+     * @param netint the machine's network interface
+     * @throws SocketException
+     */
     public void displayInterfaceInformation(NetworkInterface netint) throws SocketException {
         if (!netint.getInetAddresses().hasMoreElements() || !netint.isUp()) {
             return;
@@ -69,8 +92,13 @@ public class GameServer {
             System.out.printf("InetAddress: %s\n", inetAddress);
         }
         System.out.printf("\n");
-     }
+    }
 
+    /**
+     * Retrieves the Room with the given roomID. Returns null if none exist.
+     * @param roomID the room's ID
+     * @return the Room with the matching roomID or null if there are none
+     */
     private Room findRoom(int roomID) {
         for (Room room : rooms) {
             if (room.roomID == roomID) {
@@ -80,17 +108,19 @@ public class GameServer {
         return null;
     }
 
+    /**
+     * Removes the room from this GameServer's Room ArrayList
+     * @param room the room to be removed
+     */
     private void removeRoom(Room room) {
         rooms.remove(room);
         roomIDs.remove((Integer) room.roomID);
         System.out.printf("[%d] Room destroyed.\n", room.roomID);
     }
 
-    public static void main(String[] args) {
-        GameServer gameServer = new GameServer();
-        gameServer.acceptConnections();
-    }
-
+    /**
+    This class hosts the 2 players. It passes the DataStreams of each player to a Game instance.
+    */
     private class Room {
         private int numPlayers;
         private int roomID;
@@ -101,6 +131,12 @@ public class GameServer {
         private final DataOutputStream p1Out;
         private DataOutputStream p2Out;
 
+        /**
+         * Class constructor. Assigns a random 5-digit roomID
+         * @param in DataInputStream of the host
+         * @param out DatatOutputStream of the host
+         * @param pubOrPriv whether this room is public or private
+         */
         public Room(DataInputStream in, DataOutputStream out, boolean pubOrPriv) {
             name = "";
             isPublic = pubOrPriv;
@@ -117,8 +153,18 @@ public class GameServer {
             System.out.printf("[%d] Room created.\n", roomID);
         }
 
+        /**
+         * Sets the name of this room
+         * @param n the name
+         */
         public void setName(String n) { name = n; }
 
+        /**
+         * Lets Player 2 join the room.
+         * @param in DataInputStream of Player 2
+         * @param out DataOutputStream of Player 2
+         * @return false if the room was already full, true otherwise
+         */
         public boolean p2Join(DataInputStream in, DataOutputStream out) {
             if (p2In == null) {
                 p2In = in;
@@ -131,7 +177,13 @@ public class GameServer {
             }
         }
 
+        /**
+         * Creates a new Game instance with the two players in this Room and starts its threads.
+         */
         public void startGame() {
+            if (p2In == null) {
+                return;
+            }
             Room roomRef = this;
             // Yes i am too lazy to create a dedicated listener interface shut up
             Game game = new Game(p1Out, p2Out, new ActionListener() {
@@ -145,6 +197,9 @@ public class GameServer {
         }
     }
 
+    /**
+    This class acts a shell for the player to interact with the server. A Thread containing a ClientHandler is created each time a player connects to a server and stops running when they disconnect.
+    */
     private class ClientHandler implements Runnable {
         boolean running;
         Socket socket;
@@ -152,7 +207,11 @@ public class GameServer {
         DataOutputStream socketOut;
         Room currentRoom;
 
-        ClientHandler(Socket s) {
+        /**
+         * Class constructor.
+         * @param s the socket to the Player
+         */
+        public ClientHandler(Socket s) {
             running = true;
             socket = s;
             try {
@@ -166,6 +225,9 @@ public class GameServer {
             }
         }
         
+        /**
+         * Handles the player's commands continuously. When a host has a Room with 2 players already, runs Room.startGame and stops running.
+         */
         @Override
         public void run() {
             while (running) {
