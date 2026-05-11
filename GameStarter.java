@@ -1,7 +1,23 @@
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.net.Socket;
+/**
+This class connects to the GameServer and creates a socket that will be passed to the GameCanvas. Also starts GameFrame`s GUI.
+@author Jerry Señas (255351) and Angelico Soriano (255468)
+@version May 12, 2026
+
+I have not discussed the Java language code in my program
+with anyone other than my instructor or the teaching assistants
+assigned to this course.
+
+I have not used Java language code obtained from another student,
+or any other unauthorized source, either modified or unmodified.
+
+If any Java language code or documentation used in my program
+was obtained from another source, such as a textbook or website,
+that has been clearly noted with a proper citation in the comments
+of my program.
+*/
+
+import java.io.*;
+import java.net.*;
 import java.util.Scanner;
 
 public class GameStarter {
@@ -30,7 +46,7 @@ public class GameStarter {
                 System.out.println("");
                 System.out.println("[1] Host a room");
                 System.out.println("[2] Join a room");
-                System.out.println("[3] Show rooms");
+                System.out.println("[3] Show public rooms");
                 switch (scanner.nextLine()) {
                     case "1":
                         System.out.println("\n[1] Public or [2] Private? ");
@@ -107,10 +123,11 @@ public class GameStarter {
                         break;
                 }
 
-            }
-            
-
-
+            }       
+        } catch (ConnectException e) {
+            System.out.println("A server with an IP Address of " + ipAddress +  " and a port of " + port + " can't be found.");
+            scanner.close();
+            return;
         } catch (IOException e) {
             e.printStackTrace();
             scanner.close();

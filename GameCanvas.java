@@ -1,3 +1,21 @@
+/**
+This class contains the code of game client. This includes GUI rendering and networking.
+@author Jerry Señas (255351) and Angelico Soriano (255468)
+@version May 12, 2026
+
+I have not discussed the Java language code in my program
+with anyone other than my instructor or the teaching assistants
+assigned to this course.
+
+I have not used Java language code obtained from another student,
+or any other unauthorized source, either modified or unmodified.
+
+If any Java language code or documentation used in my program
+was obtained from another source, such as a textbook or website,
+that has been clearly noted with a proper citation in the comments
+of my program.
+*/
+
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
@@ -8,7 +26,6 @@ import java.util.ArrayList;
 import javax.swing.*;
 
 public class GameCanvas extends JComponent implements KeyListener {
-
     private static final int MAX_ITEMS = 8;
     private static final int MAX_ROWS = MAX_ITEMS / 2;
     private static final int MAX_COLS = 2 * MAX_ITEMS / MAX_ROWS;
@@ -132,9 +149,9 @@ public class GameCanvas extends JComponent implements KeyListener {
 
         Item item = items[itemIdx].getItem();
         if (item == Item.EMPTY) {
-            flavorBox.setText(String.format("Current environment: %s\n\n - %s", currentEnvironment.getName(), currentEnvironment.getDescription()));
+            flavorBox.setEnvText(currentEnvironment);
         } else {
-            flavorBox.setText(String.format("%s\n\n - %s", item.getName(), item.getDescription()));
+            flavorBox.setItemText(item);
         }
     }
 
@@ -160,6 +177,7 @@ public class GameCanvas extends JComponent implements KeyListener {
     @Override
     public void paintComponent(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         for (ItemSprite item : items) {
             item.draw(g2d);
         }

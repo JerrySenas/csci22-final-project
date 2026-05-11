@@ -1,68 +1,88 @@
+/**
+This enum contains all environments in the game. Each environment has a set of triggers that have different effects based on which environment it is.
+@author Jerry Señas (255351) and Angelico Soriano (255468)
+@version May 12, 2026
+
+I have not discussed the Java language code in my program
+with anyone other than my instructor or the teaching assistants
+assigned to this course.
+
+I have not used Java language code obtained from another student,
+or any other unauthorized source, either modified or unmodified.
+
+If any Java language code or documentation used in my program
+was obtained from another source, such as a textbook or website,
+that has been clearly noted with a proper citation in the comments
+of my program.
+*/
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.concurrent.ThreadLocalRandom;
 
 public enum Environment {
-    NORMAL(0, "Normal", "No funny business."),
-    HOARDER(1, "Hoarder", "Items don't disappear when the rack is reset."),
-    CHAOS(2, "Whims of Chaos", "Only by casting aside reason can one truly gamble."),
-    RUSSIAN(3, "Russian Roulette", "Down for a good old game of Russian Roulette?"),
-    WHISPER(4, "Whisper", "Every fourth shot is enhanced to either deal double damage or give immunity."),
-    OMEN_ONE(11, "Omen: One", "One."),
-    OMEN_TWO(12, "Omen: Idolatry", "Offer your items to your idol. Items don't disappear when the rack is reset."),
-    OMEN_THREE(13, "Omen: Silence", "Every third item use deals 3 damage to yourself."),
-    OMEN_FOUR(14, "Omen: Repose", "Shooting a blank to your opponent gives you 4 random items."),
-    OMEN_FIVE(15, "Omen: Disdain", "Taking damage gives you a 'Claws of Ardent Disdain'."),
-    OMEN_SIX(16, "Omen: Unkilling", "Bullets reduce max HP by 1 instead of dealing damage."),
-    OMEN_SEVEN(17, "Omen: Lust", "Shooting yourself enhances the next bullet. Shooting yourself with a live bullet won't pass your turn."),
-    OMEN_EIGHT(18, "Omen: Usurpation", "Shooting anyone randomly steals one of your opponent's items."),
-    OMEN_NINE(19, "Omen: Truth", "The current bullet is always revealed."),
-    OMEN_TEN(10, "Omen: Craving", "Start with a full inventory each time the rack is reset."),
+    NORMAL(0, "Normal", "No special rules", "No funny business."),
+    HOARDER(1, "Hoarder", "Items don't disappear when the gun is reloaded.", "Spend wisely~"),
+    CHAOS(2, "Whims of Chaos", "Every action randomizes the magazine and everyone's items", "Only by casting aside reason can one truly gamble."),
+    RUSSIAN(3, "Russian Roulette", "1 live, 5 blanks. No items.", "Don't feel sad about losing, losing in this game is a once-in-a-lifetime opportunity!"),
+    WHISPER(4, "Whisper", "Every fourth shot is enhanced to either deal double damage or give immunity.", "\"The trigger on a loaded weapon... it whispers for us to act.\" — Khada Jhin"),
+
+    OMEN_ONE(91, "Omen - One", "Start with only one item each time the gun is reloaded.", "Scarcity will only strengthen you more."),
+    OMEN_TWO(92, "Omen - Idolatry", "Offer your items to your idol. Items don't disappear when the gun is reloaded.", "Destroy all other thoughts. Leave nothing but your idol."),
+    OMEN_THREE(93, "Omen - Silence", "Every third item used deals 3 damage to yourself.", "Language breeds both good and evil; only silence creates equality."),
+    OMEN_FOUR(94, "Omen - Repose", "Shooting a blank to your opponent gives you 4 random items.", "Sink into the deepest slumber and face your mind."),
+    OMEN_FIVE(95, "Omen - Disdain", "Taking damage gives you a 'Claws of Ardent Disdain'.", "Crush your opponent for even thinking of facing you."),
+    OMEN_SIX(96, "Omen - Unkilling", "Live shells reduce max HP by 1 instead of dealing damage.", "You will wither, rot, and waste away... but you will never die here."),
+    OMEN_SEVEN(97, "Omen - Lust", "Shooting yourself enhances the next shot. Shooting yourself with a live bullet won't pass your turn.", "Short of breath and shorter of logic, all reason disappears. This is our ego in its purest."),
+    OMEN_EIGHT(98, "Omen - Usurpation", "Shooting anyone randomly steals one of your opponent's items.", "Satisfaction is the enemy. Take what is rightfully yours."),
+    OMEN_NINE(99, "Omen - Truth", "The current shell in the chamber is always revealed.", "Deceit — that is, everything but the truth — must be abandoned."),
+    OMEN_TEN(100, "Omen - Craving", "Start with a full inventory each time the gun is reloaded.", "Abundance will only leave you craving for more."),
     ;
 
     private final int envNum;
     private final String name;
     private final String description;
+    private final String flavor;
     private int counter;
 
-    private Environment(int num, String name, String desc) {
+    private Environment(int num, String name, String desc, String flav) {
         envNum = num;
         this.name = name;
         description = desc;
+        flavor = flav;
         counter = 0;
     }
 
-    public void bulletSetup(Game game) {
-        int numBullets = ThreadLocalRandom.current().nextInt(2, 9);
-        ArrayList<Boolean> bullets = new ArrayList<>();
+    public void shellSetup(Game game) {
+        int numShells = ThreadLocalRandom.current().nextInt(2, 9);
+        ArrayList<Boolean> shells = new ArrayList<>();
 
         switch (this) {
             case RUSSIAN:
-                bullets.add(true);
+                shells.add(true);
                 for (int i = 0; i < 5; i++) {
-                    bullets.add(false);
+                    shells.add(false);
                 }
-                Collections.shuffle(bullets);
-                game.setBullets(bullets);
+                Collections.shuffle(shells);
+                game.setShells(shells);
                 return;
             case WHISPER:
-                numBullets = Math.random() < 0.5 ? 4 : 8;
+                numShells = Math.random() < 0.5 ? 4 : 8;
                 break;
             default:
                 break;
         }
 
-        bullets.add(true);
-        bullets.add(false);
-        for (int i = 0; i < numBullets - 2; i++) {
-            bullets.add(Math.random() < 0.5);
+        shells.add(true);
+        shells.add(false);
+        for (int i = 0; i < numShells - 2; i++) {
+            shells.add(Math.random() < 0.5);
         }
 
-        Collections.shuffle(bullets);
-        game.setBullets(bullets);
+        Collections.shuffle(shells);
+        game.setShells(shells);
         if (this == OMEN_NINE) {
-            game.revealBullet();
+            game.revealShell();
         }
     }
 
@@ -105,19 +125,19 @@ public enum Environment {
         }
     }
 
-    public void onBulletChange(Game game) {
+    public void onShellChange(Game game) {
         switch (this) {
             case WHISPER:
-                if (game.getNumBullets() > 0 && game.getNumBullets() % 4 == 1) {
-                    game.enhanceBullet();
+                if (game.getNumShells() > 0 && game.getNumShells() % 4 == 1) {
+                    game.enhanceShell();
                 }
                 break;
             case CHAOS:
                 itemSetup(game);
-                bulletSetup(game);
+                shellSetup(game);
                 break;
             case OMEN_NINE:
-                game.revealBullet();
+                game.revealShell();
                 break;
 
             default:
@@ -129,7 +149,7 @@ public enum Environment {
         switch (this) {
             case CHAOS:
                 itemSetup(game);
-                bulletSetup(game);
+                shellSetup(game);
                 break;
             case OMEN_THREE:
                 counter++;
@@ -142,10 +162,10 @@ public enum Environment {
         }
     }
 
-    public void onShoot(Game game, boolean bullet, Player shooter, Player target) {
+    public void onShoot(Game game, boolean shell, Player shooter, Player target) {
         switch (this) {
             case OMEN_FOUR:
-                if (!bullet && shooter != target) {
+                if (!shell && shooter != target) {
                     for (int i = 0; i < 4; i++) {
                         shooter.addItem(Item.getRandomItem());
                     }
@@ -153,7 +173,7 @@ public enum Environment {
                 break;
             case OMEN_SEVEN:
                 if (shooter == target) {
-                    game.enhanceBullet();
+                    game.enhanceShell();
                 }
                 break;
             case OMEN_EIGHT:
@@ -198,4 +218,5 @@ public enum Environment {
     public int getEnvNum() { return envNum; }
     public String getName() { return name; }
     public String getDescription() { return description; }
+    public String getFlavor() { return flavor; }
 }

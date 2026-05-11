@@ -1,3 +1,21 @@
+/**
+This class contains the logic for the game server. This includes game logic, item functionality, and networking.
+@author Jerry Señas (255351) and Angelico Soriano (255468)
+@version May 12, 2026
+
+I have not discussed the Java language code in my program
+with anyone other than my instructor or the teaching assistants
+assigned to this course.
+
+I have not used Java language code obtained from another student,
+or any other unauthorized source, either modified or unmodified.
+
+If any Java language code or documentation used in my program
+was obtained from another source, such as a textbook or website,
+that has been clearly noted with a proper citation in the comments
+of my program.
+*/
+
 import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.SocketException;
@@ -16,8 +34,8 @@ public class Game {
     private ArrayList<Environment> envs;
     private Environment currentEnvironment;
 
-    private ArrayList<Boolean> bullets;
-    private int numBullets;
+    private ArrayList<Boolean> shells;
+    private int numShells;
     private int dmgTaken;
     private Boolean enhanced;
     private Boolean dmgModified;
@@ -77,7 +95,7 @@ public class Game {
     }
 
     public void startSet() {
-        currentEnvironment.bulletSetup(this);
+        currentEnvironment.shellSetup(this);
         currentEnvironment.itemSetup(this);
 
         dmgTaken = 1;
@@ -90,16 +108,16 @@ public class Game {
 
     public void handleShoot(int playerNum, String[] data) {
         int currentDmg = dmgTaken;
-        boolean currentBullet = bullets.get(numBullets - 1);
+        boolean currentShell = shells.get(numShells - 1);
 
-        if (enhanced && currentBullet) {
+        if (enhanced && currentShell) {
             currentDmg *= 2;
         }
 
         Player target;
         if (data[1].equals("self")) {
             target = getSelfPlayer(playerNum);
-            if (currentBullet) {
+            if (currentShell) {
                 dealDamage(currentDmg, target);
                 if (currentEnvironment != Environment.OMEN_SEVEN) {
                     changeTurn();
@@ -109,7 +127,7 @@ public class Game {
             }
         } else {
             target = getOpposingPlayer(playerNum);
-            if (currentBullet) {
+            if (currentShell) {
                 dealDamage(currentDmg, target);
             } else if (enhanced) {
                 target.setIsImmune(true);
@@ -123,10 +141,10 @@ public class Game {
             announce("PLUS_DMG;RESET");
         }
 
-        decrementBullets();
-        currentEnvironment.onShoot(this, currentBullet, getSelfPlayer(playerNum), target);
+        decrementShells();
+        currentEnvironment.onShoot(this, currentShell, getSelfPlayer(playerNum), target);
         sendGameState();
-        if (numBullets <= 0) {
+        if (numShells <= 0) {
             startSet();
         }
     }
@@ -145,11 +163,11 @@ public class Game {
                 }
 
             case BEER:
-                if (numBullets <= 1) {
+                if (numShells <= 1) {
                     return;
                 }
-                decrementBullets();
-                if (numBullets <= 0) {
+                decrementShells();
+                if (numShells <= 0) {
                     startSet();
                 }
                 break;
@@ -163,11 +181,11 @@ public class Game {
                 break;
 
             case GLASS:
-                revealBullet();
+                revealShell();
                 break;
             
             case REVERSE:
-                bullets.set(numBullets - 1, !bullets.get(numBullets - 1));
+                shells.set(numShells - 1, !shells.get(numShells - 1));
                 break;
 
             case MEDICINE:
@@ -213,19 +231,19 @@ public class Game {
         player.removeItem(itemSlot);
         currentEnvironment.onItemUse(this, item, playerNum);
         sendGameState();
-        if (numBullets <= 0) {
+        if (numShells <= 0) {
             startSet();
         }
     }
 
-    public void enhanceBullet() {
+    public void enhanceShell() {
         enhanced = true;
         announce("ENHANCE;");
     }
 
-    public void revealBullet() {
-        if (numBullets > 0) {
-            announce("REVEAL;" + (bullets.get(numBullets - 1) ? 1 : 0));
+    public void revealShell() {
+        if (numShells > 0) {
+            announce("REVEAL;" + (shells.get(numShells - 1) ? 1 : 0));
         }
     }
 
@@ -275,12 +293,12 @@ public class Game {
         }
     }
 
-    public int getNumBullets() { return numBullets; }
+    public int getNumShells() { return numShells; }
 
     public int getLives() {
         int lives = 0;
-        for (boolean bullet : bullets) {
-            if (bullet) {
+        for (boolean shell : shells) {
+            if (shell) {
                 lives += 1;
             }
         }
@@ -289,8 +307,8 @@ public class Game {
     }
     public int getBlanks() {
         int blanks = 0;
-        for (boolean bullet : bullets) {
-            if (!bullet) {
+        for (boolean shell : shells) {
+            if (!shell) {
                 blanks += 1;
             }
         }
@@ -298,19 +316,19 @@ public class Game {
         return blanks;
     }
 
-    public void setBullets(ArrayList<Boolean> shots) {
-        bullets = shots;
-        numBullets = bullets.size();
+    public void setShells(ArrayList<Boolean> shots) {
+        shells = shots;
+        numShells = shells.size();
     }
 
-    public void decrementBullets() {
-        bullets.remove(numBullets - 1);
-        numBullets--;
+    public void decrementShells() {
+        shells.remove(numShells - 1);
+        numShells--;
         if (enhanced) {
             enhanced = false;
         }
         announce("SHOOT");
-        currentEnvironment.onBulletChange(this);
+        currentEnvironment.onShellChange(this);
     }
 
     public void changeTurn() {

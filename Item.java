@@ -1,21 +1,38 @@
+/**
+This enum contains all items in the game. This enum only contains the items' information, functionality is in Game.
+@author Jerry Señas (255351) and Angelico Soriano (255468)
+@version May 12, 2026
+
+I have not discussed the Java language code in my program
+with anyone other than my instructor or the teaching assistants
+assigned to this course.
+
+I have not used Java language code obtained from another student,
+or any other unauthorized source, either modified or unmodified.
+
+If any Java language code or documentation used in my program
+was obtained from another source, such as a textbook or website,
+that has been clearly noted with a proper citation in the comments
+of my program.
+*/
 
 import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 
 
 public enum Item {
-    EMPTY (0, "", true, "", ""),
-    CIGARETTE (1, "assets/ciggy.png", true, "Cigarette Pack", "Heals 1 HP."),
-    BEER (2, "assets/beer.png", true, "Beer", "Ejects the current shell."),
-    HANDCUFFS (3, "assets/handcuffs.png", true, "Handcuffs", "Skip the opponent's next turn."),
-    GLASS (4, "assets/glass.png", true, "Magnifying Glass", "Check the current round in the chamber."),
-    REVERSE (5, "assets/reverse.png", true, "Seija's Calling Card", "Swaps the polarity of the current round in the chamber."),
-    CASING (6, "assets/casing.png", true, "The Rest of the Bullet", "If the current bullet is live, it deals 1 more damage."),
-    MEDICINE (7, "assets/medicine.png", true, "Expired SSRIs", "40% chance of dealing 1 to yourself, 40% chance of healing 2,\n20% chance of healing 2 and giving yourself immunity."),
+    EMPTY (0, "", true, "", "", ""),
+    CIGARETTE (1, "assets/ciggy.png", true, "Healthy Cigarette Pack", "Heals 1 HP.", "Recommended by all 10 doctors!"),
+    BEER (2, "assets/beer.png", true, "Saint Michael's Legally Distinct Beer", "Ejects the current shell.", "Any similarity to products produced by a certain Philippine conglomerate is probably coincidental."),
+    HANDCUFFS (3, "assets/handcuffs.png", true, "Overused Handcuffs", "Skip the opponent's next turn.", "\"Business is booming!\" — Officer Abbacchio"),
+    GLASS (4, "assets/glass.png", true, "Seldomly-Used Magnifying Glass", "Reveals the current shell in the chamber.", "\"Business isn't doing too well these days...\" — Detective Vaughn"),
+    REVERSE (5, "assets/reverse.png", true, "Seija's Calling Card", "Swaps the polarity of the current shell in the chamber.", "What is this? Some sort of Reverse Ideology?"),
+    CASING (6, "assets/casing.png", true, "The Rest of the Shell", "If the current shell is live, it deals 1 more damage.", "\"65% more bullet per bullet!\" — Cave Johnson"),
+    MEDICINE (7, "assets/medicine.png", true, "Expired SSRIs", "May heal 2 HP, deal 1 to yourself, or heal 2 HP and give yourself immunity.", "Just as effective."),
     
-    DEST_WHITE(90, "assets/white_egg.png", false, "Destruction in White", "Destroy all other items. If at least 2 were destroyed, heal 1 HP and turn this item into a Destruction in Black."),
-    DEST_BLACK(91, "assets/black_egg.png", false, "Destruction in Black", "Destroy all other items. If at least 2 were destroyed, deal 1 damage and turn this item into a Destruction in White."),
-    DISD_CLAWS(92, "assets/claws.png", false, "Claws of Ardent Disdain", "If the current bullet is live, it deals 1 more damage. Doesn't disappear when the rack is reset."),
+    DEST_WHITE(90, "assets/white_egg.png", false, "Destruction in White", "Destroy all other items. If at least 2 were destroyed, heal 1 HP and turn this item into a Destruction in Black.", "Remember nothing but her voice."),
+    DEST_BLACK(91, "assets/black_egg.png", false, "Destruction in Black", "Destroy all other items. If at least 2 were destroyed, deal 1 damage and turn this item into a Destruction in White.", "Forget all but her voice."),
+    DISD_CLAWS(92, "assets/claws.png", false, "Claws of Ardent Disdain", "If the current bullet is live, it deals 1 more damage. Doesn't disappear when the gun is reloaded.", "\"I'll crush it to rubble, until even the ruins are just ashes and dust!\" — The Omen of Disdain"),
     ;
 
     private final int itemNum;
@@ -23,13 +40,15 @@ public enum Item {
     private final boolean randomAccessible;
     private final String name;
     private final String description;
+    private final String flavor;
 
-    private Item(int itemNum, String path, boolean randAccess, String name, String desc) {
+    private Item(int itemNum, String path, boolean randAccess, String name, String desc, String flav) {
         this.itemNum = itemNum;
         spritePath = path;
         randomAccessible = randAccess;
         this.name = name;
         description = desc;
+        flavor = flav;
     }
 
     public static Item getItem(int itemNum) {
@@ -52,4 +71,5 @@ public enum Item {
     public String getSpritePath() { return spritePath; }
     public String getName() { return name; }
     public String getDescription() { return description; }
+    public String getFlavor() { return flavor; }
 }
