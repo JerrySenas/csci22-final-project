@@ -721,7 +721,7 @@ public class GameCanvas extends JComponent implements KeyListener {
                             flavorBox.setText(String.format("A %s round has been revealed", magazine.isRevealedLive ? "live" : "blank"));
                             break;
                         case "ENHANCE":
-                            magazine.enhanced = true;
+                            magazine.enhanced = Integer.parseInt(parts[1]) == 1;
                             break;
                         case "PLUS_DMG":
                             if (parts[1].equals("ADD")) {

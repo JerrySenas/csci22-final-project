@@ -205,7 +205,7 @@ public enum Environment {
             case OMEN_THREE:
                 counter++;
                 if (counter % 3 == 0) {
-                    player.takeDamage(3);
+                    game.dealDamage(3, player);
                 }
                 break;
             default:

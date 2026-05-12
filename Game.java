@@ -125,6 +125,7 @@ public class Game {
 
         dmgTaken = 1;
         enhanced = false;
+        announce("ENHANCE;0");
         dmgModified = false;
         announce("PLUS_DMG;RESET");
         sendGameState();
@@ -168,6 +169,11 @@ public class Game {
             dmgTaken = 1;
             dmgModified = false;
             announce("PLUS_DMG;RESET");
+        }
+        if (currentShell) {
+            announce("SOUND;assets/sfx/shot.wav");
+        } else {
+            announce("SOUND;assets/sfx/blank.wav");
         }
 
         decrementShells();
@@ -229,14 +235,14 @@ public class Game {
                 int roll = ThreadLocalRandom.current().nextInt(1, 11);
                 if (roll < 5) {
                     dealDamage(1, player);
-                    soundPath = "assets/sfx/medLow";
+                    soundPath = "assets/sfx/medLow.wav";
                 } else if (roll < 9) {
                     player.heal(2);
-                    soundPath = "assets/sfx/medHigh";
+                    soundPath = "assets/sfx/medHigh.wav";
                 } else {
                     player.heal(2);
                     player.setIsImmune(true);
-                    soundPath = "assets/sfx/medHigh";
+                    soundPath = "assets/sfx/medHigh.wav";
                 }
                 break;
 
@@ -252,6 +258,8 @@ public class Game {
                     player.heal(1);
                     player.clearItems();
                     player.addItem(Item.DEST_BLACK);
+                    currentEnvironment.onItemUse(this, item, player);
+                    announce("SOUND;" + soundPath);
                     sendGameState();
                 }
                 return;
@@ -261,6 +269,8 @@ public class Game {
                     dealDamage(1, getOpposingPlayer(playerNum));
                     player.clearItems();
                     player.addItem(Item.DEST_WHITE);
+                    currentEnvironment.onItemUse(this, item, player);
+                    announce("SOUND;" + soundPath);
                     sendGameState();
                 }
                 return;
@@ -282,7 +292,7 @@ public class Game {
      */
     public void enhanceShell() {
         enhanced = true;
-        announce("ENHANCE;");
+        announce("ENHANCE;1");
     }
 
     /**
