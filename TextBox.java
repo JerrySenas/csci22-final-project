@@ -18,14 +18,17 @@ of my program.
 
 import java.awt.*;
 import java.awt.geom.*;
+import java.io.*;
 
 public class TextBox extends Sprite {
     private String text, flavor;
     private final int width, height;
     private final Rectangle2D.Double outline;
+    private Font mainFont;
+    private Font flavorFont;
 
     /**
-     * Class constructor. Flavor text is set as an empty string.
+     * Class constructor. Flavor text is set as an empty string. Fonts used are loaded.
      * 
      * @param x X-coordinate of the sprite
      * @param y Y-coordinate of the sprite
@@ -40,6 +43,22 @@ public class TextBox extends Sprite {
         width = w;
         height = h;
         outline = new Rectangle2D.Double(x, y, width, height);
+
+        try {
+            mainFont = Font.createFont(Font.TRUETYPE_FONT, new File("assets/bg/vcr_osd_mono.ttf")).deriveFont(Font.PLAIN, 16);
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();   
+            ge.registerFont(mainFont);
+        } catch (IOException | FontFormatException e){
+            e.printStackTrace();
+        }
+
+        try {
+            flavorFont = Font.createFont(Font.TRUETYPE_FONT, new File("assets/bg/vcr_osd_mono.ttf")).deriveFont(Font.ITALIC, 12);
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();   
+            ge.registerFont(flavorFont);
+        } catch (IOException | FontFormatException e){
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -77,7 +96,7 @@ public class TextBox extends Sprite {
     }
 
     /**
-     * Renders the text of this TextBox in Arial 18 and the flavor text in Arial 14 and in italics.
+     * Renders the text of this TextBox in VCR OSD Mono 16 and the flavor text in VCR OSD Mono 12 Italic.
      * 
      * The text is centered horizontally and vertically within this TextBox.
      * 
@@ -87,9 +106,9 @@ public class TextBox extends Sprite {
      */
     @Override
     public void draw(Graphics2D g2d) {
-        g2d.setColor(Color.BLACK);
+        g2d.setColor(Color.WHITE);
         g2d.draw(outline);
-        g2d.setFont(new Font("Arial", Font.PLAIN, 18));
+        g2d.setFont(mainFont);
         FontMetrics fm = g2d.getFontMetrics();
         String[] textLines = text.split("\n");
         String[] flavorLines = flavor.split("\n");
@@ -101,8 +120,8 @@ public class TextBox extends Sprite {
             g2d.drawString(line, (int) getX() + xOffset, (int) getY() + yOffset);
             yOffset += fm.getHeight();
         }
-
-        g2d.setFont(new Font("Arial", Font.ITALIC, 14));
+        
+        g2d.setFont(flavorFont);
         fm = g2d.getFontMetrics();
         for (String line : flavorLines) {
             int xOffset = (width - fm.stringWidth(line)) / 2;

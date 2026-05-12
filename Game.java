@@ -85,8 +85,10 @@ public class Game {
      */
     public void startRound() {
         if (p1.getHP() == 0) {
+            announce("SOUND;assets/sfx/die.wav");
             p2Score++;
         } else if (p2.getHP() == 0) {
+            announce("SOUND;assets/sfx/die.wav");
             p1Score++;
         }
         announce(String.format("NEW_ROUND;%d;%d", p1Score, p2Score), String.format("NEW_ROUND;%d;%d", p2Score, p1Score));
@@ -187,6 +189,7 @@ public class Game {
         Player player = getSelfPlayer(playerNum);
         int itemSlot = Integer.parseInt(data[1]);
         Item item = player.getItem(itemSlot);
+        String soundPath = item.getSoundPath();
         switch (item) {
             case CIGARETTE:
                 if (player.getHP() < player.getMaxRestorableHP()) {
@@ -226,11 +229,14 @@ public class Game {
                 int roll = ThreadLocalRandom.current().nextInt(1, 11);
                 if (roll < 5) {
                     dealDamage(1, player);
+                    soundPath = "assets/sfx/medLow";
                 } else if (roll < 9) {
                     player.heal(2);
+                    soundPath = "assets/sfx/medHigh";
                 } else {
                     player.heal(2);
                     player.setIsImmune(true);
+                    soundPath = "assets/sfx/medHigh";
                 }
                 break;
 
@@ -264,6 +270,7 @@ public class Game {
         }
         player.removeItem(itemSlot);
         currentEnvironment.onItemUse(this, item, player);
+        announce("SOUND;" + soundPath);
         sendGameState();
         if (numShells <= 0) {
             startSet();

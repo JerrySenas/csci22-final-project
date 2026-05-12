@@ -21,22 +21,23 @@ import java.util.concurrent.ThreadLocalRandom;
 
 
 public enum Item {
-    EMPTY (0, "", true, "", "", ""),
-    CIGARETTE (1, "assets/ciggy.png", true, "Healthy Cigarette Pack", "Heals 1 HP.", "Recommended by all 10 doctors!"),
-    BEER (2, "assets/beer.png", true, "Saint Michael's Legally Distinct Beer", "Ejects the current shell.", "Any similarity to products produced by a certain Philippine conglomerate is probably coincidental."),
-    HANDCUFFS (3, "assets/handcuffs.png", true, "Overused Handcuffs", "Skip the opponent's next turn.", "\"Business is booming!\" — Officer Abbacchio"),
-    GLASS (4, "assets/glass.png", true, "Seldomly-Used Magnifying Glass", "Reveals the current shell in the chamber.", "\"Business isn't doing too well these days...\" — Detective Vaughn"),
-    REVERSE (5, "assets/reverse.png", true, "Seija's Calling Card", "Swaps the polarity of the current shell in the chamber.", "What is this? Some sort of Reverse Ideology?"),
-    CASING (6, "assets/casing.png", true, "The Rest of the Shell", "If the current shell is live, it deals 1 more damage.", "\"65% more bullet per bullet!\" — Cave Johnson"),
-    MEDICINE (7, "assets/medicine.png", true, "Expired SSRIs", "May heal 2 HP, deal 1 to yourself, or heal 2 HP and give yourself immunity.", "Just as effective."),
+    EMPTY (0, "", "", true, "", "", ""),
+    CIGARETTE (1, "assets/ciggy.png", "assets/sfx/ciggy.wav", true, "Healthy Cigarette Pack", "Heals 1 HP.", "Recommended by all 10 doctors!"),
+    BEER (2, "assets/beer.png", "assets/sfx/beer.wav", true, "Saint Michael's Legally Distinct Beer", "Ejects the current shell.", "Any similarity to products produced by a certain Philippine conglomerate is probably coincidental."),
+    HANDCUFFS (3, "assets/handcuffs.png", "assets/sfx/handcuffs.wav", true, "Overused Handcuffs", "Skip the opponent's next turn.", "\"Business is booming!\" — Officer Abbacchio"),
+    GLASS (4, "assets/glass.png", "assets/sfx/glass.wav", true, "Seldomly-Used Magnifying Glass", "Reveals the current shell in the chamber.", "\"Business isn't doing too well these days...\" — Detective Vaughn"),
+    REVERSE (5, "assets/reverse.png", "assets/sfx/reverse.wav", true, "Seija's Calling Card", "Swaps the polarity of the current shell in the chamber.", "What is this? Some sort of Reverse Ideology?"),
+    CASING (6, "assets/casing.png", "assets/sfx/casing.wav", true, "The Rest of the Shell", "If the current shell is live, it deals 1 more damage.", "\"65% more bullet per bullet!\" — Cave Johnson"),
+    MEDICINE (7, "assets/medicine.png", "", true, "Expired SSRIs", "May heal 2 HP, deal 1 to yourself, or heal 2 HP and give yourself immunity.", "Just as effective."),
     
-    DEST_WHITE(90, "assets/white_egg.png", false, "Destruction in White", "Destroy all other items. If at least 2 were destroyed, heal 1 HP and turn this item into a Destruction in Black.", "Remember nothing but her voice."),
-    DEST_BLACK(91, "assets/black_egg.png", false, "Destruction in Black", "Destroy all other items. If at least 2 were destroyed, deal 1 damage and turn this item into a Destruction in White.", "Forget all but her voice."),
-    DISD_CLAWS(92, "assets/claws.png", false, "Claws of Ardent Disdain", "If the current bullet is live, it deals 1 more damage. Doesn't disappear when the gun is reloaded.", "\"I'll crush it to rubble, until even the ruins are just ashes and dust!\" — The Omen of Disdain"),
+    DEST_WHITE(90, "assets/white_egg.png", "assets/sfx/dest_white.wav", false, "Destruction in White", "Destroy all other items. If at least 2 were destroyed, heal 1 HP and turn this item into a Destruction in Black.", "Remember nothing but her voice."),
+    DEST_BLACK(91, "assets/black_egg.png", "assets/sfx/dest_black.wav", false, "Destruction in Black", "Destroy all other items. If at least 2 were destroyed, deal 1 damage and turn this item into a Destruction in White.", "Forget all but her voice."),
+    DISD_CLAWS(92, "assets/claws.png", "assets/sfx/claws.wav", false, "Claws of Ardent Disdain", "If the current bullet is live, it deals 1 more damage. Doesn't disappear when the gun is reloaded.", "\"I'll crush it to rubble, until even the ruins are just ashes and dust!\" — The Omen of Disdain"),
     ;
 
     private final int itemNum;
     private final String spritePath;
+    private final String soundPath;
     private final boolean randomAccessible;
     private final String name;
     private final String description;
@@ -52,9 +53,10 @@ public enum Item {
      * @param desc this item's description
      * @param flav this item's flavor text
      */
-    private Item(int itemNum, String path, boolean randAccess, String name, String desc, String flav) {
+    private Item(int itemNum, String path, String sound, boolean randAccess, String name, String desc, String flav) {
         this.itemNum = itemNum;
         spritePath = path;
+        soundPath = sound;
         randomAccessible = randAccess;
         this.name = name;
         description = desc;
@@ -100,6 +102,12 @@ public enum Item {
      * @return filepath
      */
     public String getSpritePath() { return spritePath; }
+
+    /**
+     * Returns the filepath of this item's sound effect
+     * @return filepath
+     */
+    public String getSoundPath() { return soundPath; }
 
     /**
      * Returns this Item's name

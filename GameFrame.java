@@ -16,6 +16,7 @@ that has been clearly noted with a proper citation in the comments
 of my program.
 */
 
+import java.awt.Dimension;
 import java.net.Socket;
 import javax.swing.*;
 
@@ -45,11 +46,12 @@ public class GameFrame {
     public void setupGUI() {
         cp = (JPanel) frame.getContentPane();
         cp.setFocusable(true);
-        frame.setSize(width, height);
         frame.setTitle("Final Project - Senas - Soriano");
 
         cp.add(gameCanvas);
+        gameCanvas.setPreferredSize(new Dimension(width, height));
         
+        frame.pack();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
         frame.addKeyListener(gameCanvas);

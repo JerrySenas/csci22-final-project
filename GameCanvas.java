@@ -32,6 +32,7 @@ public class GameCanvas extends JComponent implements KeyListener {
     private static final int MAX_ITEMS = 8;
     private static final int MAX_ROWS = MAX_ITEMS / 2;
     private static final int MAX_COLS = 2 * MAX_ITEMS / MAX_ROWS;
+    private static final BufferedImage BG_IMAGE = Sprite.loadImage("assets/bg/bg_image.png");
 
     private ArrayList<Sprite> sprites;
     private Cursor itemCursor;
@@ -51,6 +52,8 @@ public class GameCanvas extends JComponent implements KeyListener {
     private Timer animTimer;
     private DataInputStream readFromServer;
     private DataOutputStream writeToServer;
+
+    private Font scoreFont;
 
     /**
      * Class constructor.
@@ -87,14 +90,14 @@ public class GameCanvas extends JComponent implements KeyListener {
         sprites.add(shootThem);
         sprites.add(shootSelf);
         
-        itemCursor = new Cursor(10, 100, Color.RED);
-        enemyCursor = new Cursor(10, 100, new Color(255, 180, 180));
+        itemCursor = new Cursor(10, 100, Color.BLUE);
+        enemyCursor = new Cursor(10, 100, Color.RED);
         enemyCursor.row = 0;
         enemyCursor.col = 3;
         sprites.add(enemyCursor);
         sprites.add(itemCursor);
 
-        p1HPBar = new HPBar(10, 15, Color.BLACK);
+        p1HPBar = new HPBar(10, 15, Color.BLUE);
         p2HPBar = new HPBar(700, 15, Color.RED);
         sprites.add(p1HPBar);
         sprites.add(p2HPBar);
@@ -113,6 +116,14 @@ public class GameCanvas extends JComponent implements KeyListener {
         } catch (IOException e) {
             System.out.println("Error in establishing connection with server: " + e);
         }
+
+        try {
+            scoreFont = Font.createFont(Font.TRUETYPE_FONT, new File("assets/bg/vcr_osd_mono.ttf")).deriveFont(Font.BOLD, 48);
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();   
+            ge.registerFont(scoreFont);
+        } catch (IOException | FontFormatException e){
+            e.printStackTrace();
+        }
     }
     
     /**
@@ -121,6 +132,7 @@ public class GameCanvas extends JComponent implements KeyListener {
     public void startGameClient() {
         new Thread(new ReadFromServer(readFromServer)).start();
         animTimer.start();
+        Sound.loopMusic("assets/bg/music.wav");
     }
 
     /**
@@ -205,6 +217,7 @@ public class GameCanvas extends JComponent implements KeyListener {
     public void paintComponent(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.drawImage(BG_IMAGE, 0, 0, null);
         for (ItemSprite item : items) {
             item.draw(g2d);
         }
@@ -505,11 +518,6 @@ public class GameCanvas extends JComponent implements KeyListener {
             }
             g2d.setColor(color);
             g2d.draw(new Rectangle2D.Double(getX(), getY(), 300, 110));
-            
-            g2d.setColor(Color.BLUE);
-            if (isSkipping) {
-                g2d.setColor(Color.RED);
-            }
 
             for (int i = 0; i < hp; i++) {
                 g2d.draw(new Ellipse2D.Double(getX() + 25 + i*65, getY() + 30, 50, 50));
@@ -538,14 +546,18 @@ public class GameCanvas extends JComponent implements KeyListener {
         }
 
         /**
-         * Draws the scoreboard in Bold Arial 48.
+         * Draws the scoreboard in VCR OSD Mono 48 Bold.
          */
         @Override
         public void draw(Graphics2D g2d) {
-            g2d.setColor(Color.BLACK);
+            g2d.setColor(Color.WHITE);
             g2d.draw(new Rectangle2D.Double(getX(), getY(), 300, 110));
-            g2d.setFont(new Font("Arial", Font.BOLD, 48));
-            g2d.drawString(String.format("%d - %d", myScore, theirScore), (int) getX() + 100, (int) getY() + 75);
+            g2d.setFont(scoreFont);
+            String scoreText = String.format("%d - %d", myScore, theirScore);
+            FontMetrics fm = g2d.getFontMetrics();
+            int xOffset = (300 - fm.stringWidth(scoreText)) / 2;
+            int yOffset = (110 - fm.getHeight()) / 2 + fm.getAscent();
+            g2d.drawString(scoreText, (int) getX() + xOffset, (int) getY() + yOffset);
         }
 
         /**
@@ -697,6 +709,9 @@ public class GameCanvas extends JComponent implements KeyListener {
                                 magazine.enhanced = false;
                             }
                             break;
+                        case "SOUND":
+                            Sound.playSFX(parts[1]);
+                            break;
                         case "TURN":
                             changeTurn(parts);
                             break;
@@ -720,11 +735,13 @@ public class GameCanvas extends JComponent implements KeyListener {
                             break;
                         case "WIN":
                             flavorBox.setText("You have bested your opponent.");
+                            Sound.playSFX("assets/sfx/win.wav");
                             cleanup();
                             isGameOver = true;
                             break;
                         case "LOSE":
                             flavorBox.setText("You have lost your life.");
+                            Sound.playSFX("assets/sfx/lose.wav");
                             cleanup();
                             isGameOver = true;
                             break;
